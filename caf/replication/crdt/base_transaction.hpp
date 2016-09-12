@@ -23,26 +23,35 @@
 
 #include <string>
 
+#include "caf/node_id.hpp"
+
 namespace caf {
 namespace replication {
 namespace crdt {
 
 struct base_transaction {
   /// @param topic for this transaction
-  base_transaction(std::string topic) : topic_(std::move(topic)) {
+  /// @param nid node which generated this transaction
+  base_transaction(std::string topic, node_id nid) : topic_(std::move(topic)),
+                                                     nid_(std::move(nid)) {
     // nop
   }
 
   /// @returns the topic of this transaction
   inline const std::string& topic() const { return topic_; }
 
+  /// @returns node which generated this transaction
+  inline const node_id& node() const { return nid_; }
+
   template <class Processor>
   friend void serialize(Processor& proc, base_transaction& x) {
     proc & x.topic_;
+    proc & x.nid_;
   }
 
 private:
   std::string topic_;
+  node_id nid_;
 };
 
 } // namespace crdt

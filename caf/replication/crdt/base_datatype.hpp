@@ -23,6 +23,8 @@
 
 #include <string>
 
+#include "caf/message.hpp"
+
 #include "caf/replication/atom_types.hpp"
 #include "caf/replication/publish_subscribe.hpp"
 
@@ -31,6 +33,7 @@ namespace replication {
 namespace crdt {
 
 ///
+//template <class T>
 class base_datatype {
 public:
   /// Default constructor
@@ -39,8 +42,22 @@ public:
     // nop
   }
 
+  /*T merge(message msg) {
+    T result;
+    msg.apply([&](const T& unpacked) {
+      result = std::move(this->merge(unpacked));
+    },
+    others >> [] {
+      // TODO: ERROR!
+    });
+    return result;
+  }*/
+
   /// @returns topic of this state
-  inline const std::string& topic() { return topic_; }
+  inline const std::string& topic() const { return topic_; }
+
+  /// @returns local node
+  inline const node_id& node() const { return nid_; }
 
   /// @private
   inline void set_owner(actor act) { owner_ = std::move(act); }
@@ -50,6 +67,9 @@ public:
 
   /// @private
   inline void set_topic(std::string topic) { topic_ = std::move(topic); }
+
+  /// @private
+  inline void set_node(node_id nid) { nid_ = std::move(nid); }
 
 protected:
   /// Propagate transaction to our parent
@@ -63,6 +83,7 @@ private:
   actor owner_; /// Owning actor of this state
   actor parent_; /// Parent of owning actor
   std::string topic_; /// Topic for this datatype
+  node_id nid_; /// Local node
 };
 
 

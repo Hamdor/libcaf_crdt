@@ -51,9 +51,7 @@ using hierarchical_propagation_type = typed_actor<
 /// State of top level replica actor
 template <class State>
 struct replica_state {
-  replica_state() : parent_{unsafe_actor_handle_init},
-                    child_left_{unsafe_actor_handle_init},
-                    child_right_{unsafe_actor_handle_init} {
+  replica_state() : tree_parent_{unsafe_actor_handle_init}, tree_childs_{} {
     // nop
   }
 
@@ -74,10 +72,9 @@ struct replica_state {
   std::set<notifyable_type<cmrdt_type>> subscribers_;
   /// Sends done to replicator
   size_t loops_;
-  // Tree relations, parent, left, right
-  hierarchical_propagation_type<State> parent_;
-  hierarchical_propagation_type<State> child_left_;
-  hierarchical_propagation_type<State> child_right_;
+  // Tree relations, parent, childs
+  hierarchical_propagation_type<State> tree_parent_;
+  std::set<hierarchical_propagation_type<State>> tree_childs_;
 };
 
 ///
@@ -105,6 +102,7 @@ replica_actor(injected_stateful_pointer<replica_actor_type, State> self,
     t.set_owner(owner);
     t.set_parent(parent);
     t.set_topic(topic);
+    t.set_node(owner.home_system().node());
     t.apply(state.get_cmrdt_transactions(topic));
     return t;
   };
@@ -129,17 +127,15 @@ replica_actor(injected_stateful_pointer<replica_actor_type, State> self,
       self->state.subscribers_.erase(subscriber);
     },
     // Buffer and propagate transactions
-    [=](publish_atom, typename State::transactions_type& transaction) {
+    [=](publish_atom, typename State::transaction_t& transaction) {
       auto& state = self->state;
       // Apply transaction to delta-CRDT, this will generate a new delta state
       auto to_buffer = state.delta_.apply(transaction);
       // Put the delta state into our update buffer
       state.update_buffer_.unite(to_buffer);
       // Propagate to_buffer to our childs
-      if (!state.child_left_.unsafe())
-        self->send(state.child_left_, hierarchical_publish::value, to_buffer);
-      if (!state.child_right_.unsafe())
-        self->send(state.child_right_, hierarchical_publish::value, to_buffer);
+      for (auto& child : state.tree_childs_)
+        self->send(child, hierarchical_publish::value, to_buffer);
       // Propagate transaction to local subscribed actors
       for (auto& subscriber : state.subscribers_)
         if (subscriber != self->current_sender())
@@ -149,19 +145,18 @@ replica_actor(injected_stateful_pointer<replica_actor_type, State> self,
     [=](hierarchical_publish, typename State::internal_type& delta) {
       auto& state = self->state;
       // Apply delta to our state and update buffer
-      auto local_delta = state.delta_.merge(delta);
+      auto local_delta = state.delta_.merge(state.topic_, delta);
       if (local_delta.empty())
         return; // No change, we already know that state
       auto& sender = self->current_sender();
-      if (sender != state.parent_)
+      if (sender != state.tree_parent_)
         // Only store to update buffer, if we recieved this from a child, then
         // it is our responsibility to forward the state to our parent
         state.update_buffer_.unite(local_delta);
       // Notify childs
-      if (sender != state.child_left_ && ! state.child_left_.unsafe())
-        self->send(state.child_left_, hierarchical_publish::value, local_delta);
-      if (sender != state.child_right_ && ! state.child_right_.unsafe())
-        self->send(state.child_right_, hierarchical_publish::value, local_delta);
+      for (auto& child : state.tree_childs_)
+        if (sender != child)
+          self->send(child, hierarchical_publish::value, local_delta);
       // Notify subscribers
       auto transaction = local_delta.get_cmrdt_transactions(state.topic_);
       for (auto& sub : state.subscribers_)
@@ -171,14 +166,15 @@ replica_actor(injected_stateful_pointer<replica_actor_type, State> self,
     // TODO: Make time and loop configurable
     after(std::chrono::seconds(1)) >> [=] {
       auto& state = self->state;
-      if (state.parent_.unsafe()) // TODO: Remove this if we can build the tree
+      if (state.tree_parent_.unsafe()) // TODO: Remove this if we can build the tree
         return;
       // Check if our parent is the replicator, then we have to send our
       // full state in intervals.
-      auto& data = (state.parent_ == self->system().replicator().actor_handle()
-                      && ++state.loops_ % 100) ? state.delta_
+      auto repl = self->system().replicator().actor_handle();
+      auto& data = (state.tree_parent_ == repl && ++state.loops_ % 100)
+                                               ? state.delta_
                                                : state.update_buffer_;
-      self->send(state.parent_, hierarchical_publish::value, data);
+      self->send(state.tree_parent_, hierarchical_publish::value, data);
       state.update_buffer_.clear();
     }
   };

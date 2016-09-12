@@ -51,7 +51,7 @@ public:
         // to the local top level replica. This handler is just called once.
         state_ = std::move(state);
       },
-      [&](notify_atom, const typename State::transactions_type& operations) {
+      [&](notify_atom, const typename State::transaction_t& operations) {
         // Recieved operations from other replicas, apply the operations
         // to this local state and print values.
         state_.apply(operations);
@@ -83,19 +83,16 @@ struct cfg : public actor_system_config {
     load<replication::replicator>();
   }
 
-  ///
-  template <class T, class Flush, class Resync>
-  cfg& add_root_replica(const std::string& topic, const Flush&, const Resync&) {
+  /// Creates a local root replica
+  template <class T, class Resync, class Flush>
+  cfg& add_replica(const std::string& topic, const Resync&, const Flush&) {
     return *this;
   }
 
-  template <class Flush>
-  cfg& add_left_child_replica(const std::string& name, const Flush&) {
-    return *this;
-  }
-
-  template <class Flush>
-  cfg& add_right_child_replica(const std::string& name, const Flush&) {
+  /// Create hierachical replicas with given path
+  template <class T, class Resync, class Flush>
+  cfg& add_replica(const std::string& topic, const std::string& path,
+                   const Resync&, const Flush&) {
     return *this;
   }
 };
@@ -103,28 +100,36 @@ struct cfg : public actor_system_config {
 int main(int argc, char* argv[]) {
   auto flush_interval  = std::chrono::seconds(1);
   auto resync_interval = std::chrono::seconds(10);
-  // --- Build local replica tree
+  std::string topic = "/rand";
+  // --- Build local replica tree for topic "/rand"
   //            root
   //           /    \
   //       sub1      sub2
   //      /
   //  hello
-  auto& root = cfg{}.add_root_replica<crdt::gset<int>>("/rand", flush_interval,
-                                                       resync_interval);
-  auto& sub1 = root.add_left_child_replica("sub1", flush_interval);
-  auto& sub2 = root.add_right_child_replica("sub2", flush_interval);
-  auto& hello = sub1.add_left_child_replica("hello", flush_interval);
-  // --- Create actor system
-  actor_system system{actor_system_config{}.load<io::middleman>()
-                                           .load<replication::replicator>()};
+  actor_system system{
+    cfg{}.add_replica<crdt::gset<int>>(topic, /*"/",*/ flush_interval,
+                                       resync_interval)
+         .add_replica<crdt::gset<int>>(topic, "/sub1", flush_interval,
+                                       resync_interval)
+         .add_replica<crdt::gset<int>>(topic, "/sub1/hello", flush_interval,
+                                       resync_interval)
+         .add_replica<crdt::gset<int>>(topic, "/sub2", flush_interval,
+                                       resync_interval)
+         .load<io::middleman>()
+         .load<replication::replicator>()};
   // --- Spawn some workers
   auto worker1 = system.spawn<worker<crdt::gset<int>>>("worker1");
   auto worker2 = system.spawn<worker<crdt::gset<int>>>("worker2");
   // --- Subscribe to updates ==> authority (host) + path (topic)
   auto& repl = system.replicator();
   // TODO: Einkommentieren wenn config geht..
-  //repl.subscribe<crdt::gset<int>>("root/rand", worker1);
-  //repl.subscribe<crdt::gset<int>>("hello.sub1.root/rand", worker2);
+  //repl.subscribe<crdt::gset<int>>("/rand", worker1);
+  //repl.subscribe<crdt::gset<int>>("/rand", "/sub1/hello", worker2);
   repl.subscribe<crdt::gset<int>>("/rand", worker1);
   repl.subscribe<crdt::gset<int>>("/rand", worker2);
+  // -- TODO: Move to unit test
+  crdt::gcounter<int> b;
+  std::cout << "Value: " << b.count() << ", " << (b += 2) << ", " << b.count()
+            << ", " << b++ << ", " << b.count() << ", " << ++b << std::endl;
 }

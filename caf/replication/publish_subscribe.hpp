@@ -33,7 +33,7 @@ namespace replication {
 template <class State>
 using notifyable_type = typed_actor<
   reacts_to<initial_atom, State>,
-  reacts_to<notify_atom, typename State::transactions_type>
+  reacts_to<notify_atom, typename State::transaction_t>
 >;
 
 /// Interface definition for actors which support subscribe/unsubscribe
@@ -48,7 +48,7 @@ using subscribable_type = typed_actor<
 /// Interface definition for actors which support publish
 template <class State>
 using publishable_type = typed_actor<
-  reacts_to<publish_atom, typename State::transactions_type>
+  reacts_to<publish_atom, typename State::transaction_t>
 >;
 
 } // namespace replication

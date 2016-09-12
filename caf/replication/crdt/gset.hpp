@@ -18,8 +18,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_CMRDT_GSET_HPP
-#define CAF_REPLICATION_CMRDT_GSET_HPP
+#ifndef CAF_REPLICATION_CRDT_GSET_HPP
+#define CAF_REPLICATION_CRDT_GSET_HPP
 
 #include <set>
 #include <algorithm>
@@ -38,36 +38,39 @@ namespace crdt {
 namespace {
 
 /// A gset support the following mutable operations
-enum operations {
+enum class gset_operations {
   none,
   insertion
 };
 
 /// Describes a transation for gset<> as CmRDT
 template <class T>
-struct transaction : public base_transaction {
+struct gset_transaction : public base_transaction {
+  using operation_t = gset_operations;
+
   /// Construct a new transaction
-  transaction(std::string topic, operations operation, std::set<T> values)
-    : base_transaction(std::move(topic)),
+  gset_transaction(std::string topic, node_id nid, operation_t operation,
+                   std::set<T> values)
+    : base_transaction(std::move(topic), std::move(nid)),
       op_(std::move(operation)),
       values_(std::move(values)) {
     // nop
   }
 
   /// Returns the operation of this transaction
-  inline const operations& operation() const { return op_; }
+  inline const operation_t& operation() const { return op_; }
 
   /// Returns the value of this transaction
   inline const std::set<T>& values() const { return values_; }
 
   template <class Processor>
-  friend void serialize(Processor& proc, transaction<T>& x) {
+  friend void serialize(Processor& proc, gset_transaction<T>& x) {
     proc & x.op_;
     proc & x.values_;
   }
 
 private:
-  operations op_;
+  operation_t op_;
   std::set<T> values_;
 };
 
@@ -78,6 +81,9 @@ namespace delta {
 /// @private
 template <class T>
 struct gset_impl {
+  using operator_t = gset_operations;
+  using transaction_t = gset_transaction<T>;
+
   /// Default constructor
   gset_impl() = default;
 
@@ -88,9 +94,9 @@ struct gset_impl {
   /// Apply transaction from a local subscriber to top level replica
   /// @param history a transaction
   /// @return a delta-CRDT which represent the delta
-  gset_impl<T> apply(const transaction<T>& history) {
+  gset_impl<T> apply(const transaction_t& history) {
     std::set<T> delta;
-    if (history.operation() != insertion)
+    if (history.operation() != operator_t::insertion)
       return {std::move(delta)};
     for (auto& elem : history.values())
       if (internal_emplace(elem))
@@ -101,7 +107,7 @@ struct gset_impl {
   /// Merge function, for this type it is simple
   /// @param other delta-CRDT to merge into this
   /// @returns a delta gset<T>
-  gset_impl<T> merge(const gset_impl<T>& other) {
+  gset_impl<T> merge(const std::string&, const gset_impl<T>& other) {
     std::set<T> delta;
     for (auto& elem : other.set_)
       if (internal_emplace(elem))
@@ -113,14 +119,15 @@ struct gset_impl {
   /// a delta State
   void unite(const gset_impl<T>& delta) {
     // For this type it is simple, we just have to merge `delta` into this.
-    merge(delta);
+    // Topic is not used
+    merge("", delta);
   }
 
   /// This is used to convert this delta-CRDT to CmRDT transactions
   /// @param topic for this transaction
-  transaction<T> get_cmrdt_transactions(const std::string& topic) const {
+  transaction_t get_cmrdt_transactions(const std::string& topic) const {
     // For this type its simple again, we just have to copy the set
-    return {topic, insertion, set_};
+    return {topic, {}, operator_t::insertion, set_};
   }
 
   /// @returns `true` if the state is empty
@@ -152,15 +159,17 @@ namespace cmrdt {
 template <class T>
 class gset_impl : public base_datatype {
 public:
+  using operator_t = gset_operations;
   /// Mutable operations will trigger this type
-  using transactions_type = transaction<T>;
+  using transaction_t = gset_transaction<T>;
 
   /// Insert a element into this gset
   /// @param elem to insert
   /// @returns a transaction
-  transactions_type insert(const T& elem) {
+  transaction_t insert(const T& elem) {
     auto b = internal_emplace(elem);
-    auto result = transactions_type{topic(), b ? insertion : none, {elem}};
+    auto result = transaction_t{topic(), node(), b ? operator_t::insertion
+                                                   : operator_t::none, {elem}};
     publish(result);
     return result;
   }
@@ -168,13 +177,13 @@ public:
   /// Add a set of elements into gset
   /// @param elems to insert
   /// @returns a set of operations done to the gset
-  transactions_type subset_insert(const std::set<T>& elems) {
+  transaction_t subset_insert(const std::set<T>& elems) {
     std::set<T> insertions;
     for (auto& elem : elems) {
       if (internal_emplace(elem))
         insertions.emplace(elem);
     }
-    auto result = {insertion, std::move(insertions), topic()};
+    auto result = {operator_t::insertion, std::move(insertions), topic()};
     publish(result);
     return result;
   }
@@ -204,8 +213,8 @@ public:
 
   /// Apply transaction to local CmRDT type
   /// @param history to apply
-  void apply(const transactions_type& history) {
-    if (history.operation() == none)
+  void apply(const transaction_t& history) {
+    if (history.operation() == operator_t::none)
       return;
     for (auto& transaction : history.values())
       set_.emplace(transaction);
@@ -243,4 +252,4 @@ struct gset : public cmrdt::gset_impl<T> {
 } // namespace replication
 } // namespace caf
 
-#endif // CAF_REPLICATION_CMRDT_GSET_HPP
+#endif // CAF_REPLICATION_CRDT_GSET_HPP

@@ -28,5 +28,6 @@
 #include "caf/replication/replicator.hpp"
 
 #include "caf/replication/crdt/gset.hpp"
+#include "caf/replication/crdt/gcounter.hpp"
 
 #endif // CAF_REPLICATION_ALL_HPP
