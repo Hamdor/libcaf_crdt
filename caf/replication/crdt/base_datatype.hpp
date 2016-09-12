@@ -39,13 +39,6 @@ public:
     // nop
   }
 
-  ///
-  template <class Data>
-  void publish(const Data& data) const {
-    if (!parent_.unsafe())
-      send_as(owner_, parent_, publish_atom::value, data);
-  }
-
   /// @returns topic of this state
   inline const std::string& topic() { return topic_; }
 
@@ -58,10 +51,18 @@ public:
   /// @private
   inline void set_topic(std::string topic) { topic_ = std::move(topic); }
 
+protected:
+  /// Propagate transaction to our parent
+  template <class Data>
+  void publish(const Data& data) const {
+    if (!parent_.unsafe())
+      send_as(owner_, parent_, publish_atom::value, data);
+  }
+
 private:
-  actor owner_;
-  actor parent_;
-  std::string topic_;
+  actor owner_; /// Owning actor of this state
+  actor parent_; /// Parent of owning actor
+  std::string topic_; /// Topic for this datatype
 };
 
 

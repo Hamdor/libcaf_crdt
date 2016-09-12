@@ -46,7 +46,6 @@ enum operations {
 /// Describes a transation for gset<> as CmRDT
 template <class T>
 struct transaction : public base_transaction {
-
   /// Construct a new transaction
   transaction(std::string topic, operations operation, std::set<T> values)
     : base_transaction(std::move(topic)),
@@ -124,6 +123,13 @@ struct gset_impl {
     return {topic, insertion, set_};
   }
 
+  /// @returns `true` if the state is empty
+  ///          `false` otherwise
+  inline bool empty() const { return set_.empty(); }
+
+  /// Clear the internal set
+  inline void clear() { set_.clear(); }
+
   /// @private
   template <class Processor>
   friend void serialize(Processor& proc, gset_impl<T>& x) {
@@ -146,7 +152,6 @@ namespace cmrdt {
 template <class T>
 class gset_impl : public base_datatype {
 public:
-
   /// Mutable operations will trigger this type
   using transactions_type = transaction<T>;
 
@@ -227,7 +232,7 @@ private:
 
 } // namespace <anonymous>
 
-///
+/// Implementation of a grow-only set (GSet)
 template <class T>
 struct gset : public cmrdt::gset_impl<T> {
   /// Internal type of gset, this implementation is used between

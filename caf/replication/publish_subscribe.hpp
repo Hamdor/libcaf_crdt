@@ -28,14 +28,15 @@
 namespace caf {
 namespace replication {
 
-///
+/// Interface definition for actors which work with CRDT States and support
+/// notifications.
 template <class State>
 using notifyable_type = typed_actor<
   reacts_to<initial_atom, State>,
   reacts_to<notify_atom, typename State::transactions_type>
 >;
 
-///
+/// Interface definition for actors which support subscribe/unsubscribe
 template <class State>
 using subscribable_type = typed_actor<
   typename replies_to<
@@ -44,7 +45,7 @@ using subscribable_type = typed_actor<
   >::template with<initial_atom, State>,
   reacts_to<unsubscribe_atom, notifyable_type<State>>>;
 
-///
+/// Interface definition for actors which support publish
 template <class State>
 using publishable_type = typed_actor<
   reacts_to<publish_atom, typename State::transactions_type>

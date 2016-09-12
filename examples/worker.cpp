@@ -76,15 +76,55 @@ private:
   State state_; /// State of worker
 };
 
+/// TODO: Implement a working config ....
+struct cfg : public actor_system_config {
+  cfg() {
+    load<io::middleman>().
+    load<replication::replicator>();
+  }
+
+  ///
+  template <class T, class Flush, class Resync>
+  cfg& add_root_replica(const std::string& topic, const Flush&, const Resync&) {
+    return *this;
+  }
+
+  template <class Flush>
+  cfg& add_left_child_replica(const std::string& name, const Flush&) {
+    return *this;
+  }
+
+  template <class Flush>
+  cfg& add_right_child_replica(const std::string& name, const Flush&) {
+    return *this;
+  }
+};
+
 int main(int argc, char* argv[]) {
+  auto flush_interval  = std::chrono::seconds(1);
+  auto resync_interval = std::chrono::seconds(10);
+  // --- Build local replica tree
+  //            root
+  //           /    \
+  //       sub1      sub2
+  //      /
+  //  hello
+  auto& root = cfg{}.add_root_replica<crdt::gset<int>>("/rand", flush_interval,
+                                                       resync_interval);
+  auto& sub1 = root.add_left_child_replica("sub1", flush_interval);
+  auto& sub2 = root.add_right_child_replica("sub2", flush_interval);
+  auto& hello = sub1.add_left_child_replica("hello", flush_interval);
   // --- Create actor system
   actor_system system{actor_system_config{}.load<io::middleman>()
                                            .load<replication::replicator>()};
   // --- Spawn some workers
   auto worker1 = system.spawn<worker<crdt::gset<int>>>("worker1");
   auto worker2 = system.spawn<worker<crdt::gset<int>>>("worker2");
-  // --- Subscribe to updates
+  // --- Subscribe to updates ==> authority (host) + path (topic)
   auto& repl = system.replicator();
+  // TODO: Einkommentieren wenn config geht..
+  //repl.subscribe<crdt::gset<int>>("root/rand", worker1);
+  //repl.subscribe<crdt::gset<int>>("hello.sub1.root/rand", worker2);
   repl.subscribe<crdt::gset<int>>("/rand", worker1);
   repl.subscribe<crdt::gset<int>>("/rand", worker2);
 }
