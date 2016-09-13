@@ -31,6 +31,7 @@
 
 #include "caf/replication/atom_types.hpp"
 
+#include "caf/replication/interfaces/tree.hpp"
 #include "caf/replication/interfaces/publish_subscribe.hpp"
 
 namespace caf {
@@ -53,15 +54,15 @@ struct root_replica_state {
   /// Internal most recent delta-CRDT state
   delta_type data_;
   /// Childs
-  std::set<publishable_type<State>> tree_childs_;
+  std::set<publishable_t<State>> tree_childs_;
   /// Topic
   std::string topic_;
 };
 
 template <class State>
-using root_replica_actor = typed_actor<
+using root_replica_actor_t = typed_actor<
   reacts_to<message>
->::extend_with<publishable_type<State>>;
+>::extend_with<publishable_t<State>, tree_t<State>>;
 
 } // namespace <anonymous>
 
@@ -69,11 +70,11 @@ using root_replica_actor = typed_actor<
 /// between the replicas (CmRDTs) and the Replicator (delta-CRDT). This actor
 /// has to translate between both CRDT classes.
 template <class State>
-typename root_replica_actor<State>::behavior_type
-root_replica_actor(typename root_replica_actor<State>::template stateful_pointer<root_replica_state<State>> self,
-                   std::string topic) {
+typename root_replica_actor_t<State>::behavior_type
+root_replica_actor(typename root_replica_actor_t<State>::template stateful_pointer<root_replica_state<State>> self,
+                   const std::string& topic) {
   // Init data
-  self->state.topic_ = std::move(topic);
+  self->state.topic_ = topic;
   return {
     [=](message& msg) {
       typename State::internal_t delta;
@@ -98,12 +99,20 @@ root_replica_actor(typename root_replica_actor<State>::template stateful_pointer
       auto& state = self->state;
       // Send to other childs
       for (auto& child : state.tree_childs_)
-        self->send(child, publish_atom::value, transaction);
+        if (self->current_sender() != child)
+          self->send(child, publish_atom::value, transaction);
       auto delta = state.data_.apply(transaction);
       if (delta.empty())
         return;
       self->send(self->system().replicator().actor_handle(),
                  from_local_atom::value, state.topic_, make_message(delta));
+    },
+    [=](set_parent_atom, const publishable_t<State>&) {
+      // nop
+    },
+    //
+    [=](add_child_atom, const publishable_t<State>& child) {
+      self->state.tree_childs_.emplace(child);
     }
   };
 }

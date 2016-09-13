@@ -18,30 +18,25 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_INTERFACES_PUBLISH_SUBSCRIBE_HPP
-#define CAF_REPLICATION_INTERFACES_PUBLISH_SUBSCRIBE_HPP
+ #ifndef CAF_REPLICATION_INTERFACES_TREE_HPP
+ #define CAF_REPLICATION_INTERFACES_TREE_HPP
 
-#include "caf/replication/interfaces/notifyable.hpp"
+#include "caf/typed_actor.hpp"
+
+#include "caf/replication/interfaces/publish_subscribe.hpp"
 
 namespace caf {
 namespace replication {
 
-/// Interface definition for actors which support subscribe/unsubscribe
+/// Interface to build a tree by providing a set parent function and allow
+/// to have childs
 template <class State>
-using subscribable_t = typed_actor<
-  typename replies_to<
-    subscribe_atom,
-    notifyable_type<State>
-  >::template with<initial_atom, State>,
-  reacts_to<unsubscribe_atom, notifyable_type<State>>>;
-
-/// Interface definition for actors which support publish
-template <class State>
-using publishable_t = typed_actor<
-  reacts_to<publish_atom, typename State::transaction_t>
+using tree_t = typed_actor<
+  reacts_to<set_parent_atom, publishable_t<State>>,
+  reacts_to<add_child_atom, publishable_t<State>>
 >;
 
 } // namespace replication
 } // namespace caf
 
-#endif // CAF_REPLICATION_INTERFACES_PUBLISH_SUBSCRIBE_HPP
+ #endif // CAF_REPLICATION_INTERFACES_TREE_HPP

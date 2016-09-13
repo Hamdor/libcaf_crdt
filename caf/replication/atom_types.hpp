@@ -32,6 +32,8 @@ using initial_atom = atom_constant<atom("init")>;
 /// Send to subscribed actors when a replica has changed
 using notify_atom = atom_constant<atom("notify")>;
 
+// -------- Internal atoms -----------------------------------------------------
+
 /// Atom used to register the replicator
 using replicator_atom = atom_constant<atom("replicator")>;
 
@@ -40,6 +42,12 @@ using from_local_atom = atom_constant<atom("fromlocal")>;
 
 /// @private
 using from_remote_atom = atom_constant<atom("fromremote")>;
+
+/// @private
+using set_parent_atom = atom_constant<atom("setparent")>;
+
+/// @private
+using add_child_atom = atom_constant<atom("addchild")>;
 
 } // namespace replication
 } // namespace caf

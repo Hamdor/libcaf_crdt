@@ -63,7 +63,7 @@ public:
           aout(this) << val << " ";
         aout(this) << endl;
       },
-      after(std::chrono::seconds(1)) >> [&] {
+      after(std::chrono::seconds(2)) >> [&] {
         // Generate some random values, we assume, that other subscribers
         // will recieve these updates. This simulates some work.
         auto rnd = std::rand();
@@ -121,19 +121,22 @@ int main(int argc, char* argv[]) {
          .load<io::middleman>()
          .load<replication::replicator>()};
   // --- Spawn some workers
+  // Spawn a new tree:
+  //       root
+  //      /   \
+  //   sub1    sub2
+  //   /
+  // subsub1
   auto worker1 = system.spawn<worker<crdt::gset<int>>>("worker1");
   auto worker2 = system.spawn<worker<crdt::gset<int>>>("worker2");
   // --- Subscribe to updates ==> authority (host) + path (topic)
   auto& repl = system.replicator();
-  // TODO: Einkommentieren wenn config geht..
-  //repl.subscribe<crdt::gset<int>>("/rand", worker1);
-  //repl.subscribe<crdt::gset<int>>("/rand", "/sub1/hello", worker2);
-  repl.subscribe<crdt::gset<int>>("/rand", worker1);
-  repl.subscribe<crdt::gset<int>>("/rand", worker2);
+  repl.subscribe<crdt::gset<int>>("/rand", "/sub2", worker1);
+  repl.subscribe<crdt::gset<int>>("/rand", "/sub1/subsub1", worker2);
   // -- TODO: Move to unit test
-  crdt::gcounter<int> b;
+  /*crdt::gcounter<int> b;
   std::cout << "Value: " << b.count() << ", " << (b += 2) << ", " << b.count()
             << ", " << b++ << ", " << b.count() << ", " << ++b << std::endl;
   // Bleh...
-  system.spawn(caf::replication::detail::root_replica_actor<crdt::gset<int>>, "hello");
+  system.spawn(caf::replication::detail::root_replica_actor<crdt::gset<int>>, "hello");*/
 }

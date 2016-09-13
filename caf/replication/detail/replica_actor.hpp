@@ -31,6 +31,7 @@
 
 #include "caf/replication/atom_types.hpp"
 
+#include "caf/replication/interfaces/tree.hpp"
 #include "caf/replication/interfaces/publish_subscribe.hpp"
 
 namespace caf {
@@ -57,14 +58,17 @@ struct replica_state {
   /// Local subscribed actors
   std::set<notifyable_type<cmrdt_type>> subscribers_;
   /// Tree relations, parent, childs
-  publishable_type<State> tree_parent_;
-  std::set<publishable_type<State>> tree_childs_;
+  publishable_t<State> tree_parent_;
+  std::set<publishable_t<State>> tree_childs_;
 };
 
 ///
 template <class State>
-using replica_actor_type = typename subscribable_type<State>::
-                             template extend_with<publishable_type<State>>;
+using replica_actor_t = typename subscribable_t<State>::
+                          template extend_with<
+                            publishable_t<State>,
+                            tree_t<State>
+                          >;
 
 template <template <class> class Interface, class State>
 using injected_stateful_pointer = typename Interface<State>::template
@@ -74,9 +78,9 @@ using injected_stateful_pointer = typename Interface<State>::template
 
 /// Local top level replica actor
 template <class State>
-typename replica_actor_type<State>::behavior_type
-replica_actor(injected_stateful_pointer<replica_actor_type, State> self,
-              std::string topic) {
+typename replica_actor_t<State>::behavior_type
+replica_actor(injected_stateful_pointer<replica_actor_t, State> self,
+              const std::string& topic) {
   // Initializes new states, which are initialy send to subscribers
   auto init_state = [](const actor& owner, const actor& parent,
                        const State& state) -> State {
@@ -86,7 +90,7 @@ replica_actor(injected_stateful_pointer<replica_actor_type, State> self,
     return t;
   };
   // Init data
-  self->state.data_.set_topic(std::move(topic));
+  self->state.data_.set_topic(topic);
   return {
     // Handles subscribe requests from actors
     [=](subscribe_atom, const notifyable_type<State>& subscriber) {
@@ -109,22 +113,34 @@ replica_actor(injected_stateful_pointer<replica_actor_type, State> self,
     [=](publish_atom, typename State::transaction_t& transaction) {
       auto& state = self->state;
       state.data_.apply(transaction);
-      // Store state into buffer
-      state.transaction_buffer_.emplace_back(transaction); // TODO: Collapse function wenn zu groß?
-      // Propagate transaction to local subscribed actors
       auto& sender = self->current_sender();
+      // Store state into buffer, if we recieved this through one of our childs
+      if (sender != state.tree_parent_)
+        state.transaction_buffer_.emplace_back(transaction);
+      // Propagate state to our childs
+      for (auto& child : state.tree_childs_)
+        if (sender != child)
+          self->send(child, publish_atom::value, transaction);
+      // Propagate transaction to local subscribed actors
       for (auto& subscriber : state.subscribers_)
         if (subscriber != sender)
           self->send(subscriber, notify_atom::value, transaction);
+    },
+    // Set a parent
+    [=](set_parent_atom, const publishable_t<State>& parent) {
+      self->state.tree_parent_ = parent;
+    },
+    // Set childs
+    [=](add_child_atom, const publishable_t<State>& child) {
+      self->state.tree_childs_.emplace(child);
     },
     // Sends buffer to parent
     // TODO: Make time and loop configurable
     after(std::chrono::seconds(1)) >> [=] {
       auto& state = self->state;
-      // TODO: Collaps buffer to single transaction... (if possible)
-      for (auto& child : state.tree_childs_)
-        for (auto& buf : state.transaction_buffer_)
-          self->send(child, publish_atom::value, buf);
+      for (auto& buf : state.transaction_buffer_)
+        self->send(state.tree_parent_, publish_atom::value, buf);
+      state.transaction_buffer_.clear();
     }
   };
 }
