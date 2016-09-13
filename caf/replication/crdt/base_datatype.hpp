@@ -26,7 +26,8 @@
 #include "caf/message.hpp"
 
 #include "caf/replication/atom_types.hpp"
-#include "caf/replication/publish_subscribe.hpp"
+
+#include "caf/replication/interfaces/publish_subscribe.hpp"
 
 namespace caf {
 namespace replication {
@@ -56,8 +57,11 @@ public:
   /// @returns topic of this state
   inline const std::string& topic() const { return topic_; }
 
+  /// @returns owning actor
+  inline const actor& owner() const { return owner_; }
+
   /// @returns local node
-  inline const node_id& node() const { return nid_; }
+  inline node_id node() const { return owner_.node(); }
 
   /// @private
   inline void set_owner(actor act) { owner_ = std::move(act); }
@@ -67,9 +71,6 @@ public:
 
   /// @private
   inline void set_topic(std::string topic) { topic_ = std::move(topic); }
-
-  /// @private
-  inline void set_node(node_id nid) { nid_ = std::move(nid); }
 
 protected:
   /// Propagate transaction to our parent
@@ -83,7 +84,6 @@ private:
   actor owner_; /// Owning actor of this state
   actor parent_; /// Parent of owning actor
   std::string topic_; /// Topic for this datatype
-  node_id nid_; /// Local node
 };
 
 

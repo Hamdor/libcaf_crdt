@@ -28,6 +28,8 @@
 #include "caf/io/all.hpp"
 #include "caf/replication/all.hpp"
 
+#include "caf/replication/detail/root_replica_actor.hpp"
+
 using namespace std;
 using namespace caf;
 using namespace caf::replication;
@@ -55,10 +57,10 @@ public:
         // Recieved operations from other replicas, apply the operations
         // to this local state and print values.
         state_.apply(operations);
-        aout(this) << id_string_ << ": got " << operations.values().size()
-                   << " " << "operations" << endl;
-        for (const auto& value : state_.get_immutable())
-          aout(this) << value << " ";
+        aout(this) << id_string_ << ": " << operations.ticks() << "ns"
+                   << ", insert: ";
+        for (auto& val : operations.values())
+          aout(this) << val << " ";
         aout(this) << endl;
       },
       after(std::chrono::seconds(1)) >> [&] {
@@ -132,4 +134,6 @@ int main(int argc, char* argv[]) {
   crdt::gcounter<int> b;
   std::cout << "Value: " << b.count() << ", " << (b += 2) << ", " << b.count()
             << ", " << b++ << ", " << b.count() << ", " << ++b << std::endl;
+  // Bleh...
+  system.spawn(caf::replication::detail::root_replica_actor<crdt::gset<int>>, "hello");
 }

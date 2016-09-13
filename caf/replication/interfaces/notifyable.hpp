@@ -18,8 +18,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_PUBLISH_SUBSCRIBE_HPP
-#define CAF_REPLICATION_PUBLISH_SUBSCRIBE_HPP
+#ifndef CAF_REPLICATION_INTERFACES_NOTIFYABLE_HPP
+#define CAF_REPLICATION_INTERFACES_NOTIFYABLE_HPP
 
 #include "caf/typed_actor.hpp"
 
@@ -36,22 +36,7 @@ using notifyable_type = typed_actor<
   reacts_to<notify_atom, typename State::transaction_t>
 >;
 
-/// Interface definition for actors which support subscribe/unsubscribe
-template <class State>
-using subscribable_type = typed_actor<
-  typename replies_to<
-    subscribe_atom,
-    notifyable_type<State>
-  >::template with<initial_atom, State>,
-  reacts_to<unsubscribe_atom, notifyable_type<State>>>;
-
-/// Interface definition for actors which support publish
-template <class State>
-using publishable_type = typed_actor<
-  reacts_to<publish_atom, typename State::transaction_t>
->;
-
 } // namespace replication
 } // namespace caf
 
-#endif // CAF_REPLICATION_PUBLISH_SUBSCRIBE_HPP
+#endif // CAF_REPLICATION_INTERFACES_NOTIFYABLE_HPP

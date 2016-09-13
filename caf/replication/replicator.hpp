@@ -24,9 +24,9 @@
 #include "caf/config.hpp"
 #include "caf/actor_system.hpp"
 
-#include "caf/replication/replica_actor.hpp"
 #include "caf/replication/replicator_actor.hpp"
 
+#include "caf/replication/detail/replica_actor.hpp"
 #include "caf/replication/detail/replicator_hooks.hpp"
 
 namespace caf {
@@ -70,13 +70,13 @@ private:
 
   template <class T>
   auto lookup_or_make(const std::string& id)
-  -> decltype(system_.spawn(replica_actor<T>, id)) {
-    using result_type = decltype(system_.spawn(replica_actor<T>, id));
+  -> decltype(system_.spawn(detail::replica_actor<T>, id)) {
+    using result_type = decltype(system_.spawn(detail::replica_actor<T>, id));
     auto iter = top_level_replicas_.find(id);
     if (iter != top_level_replicas_.end())
       return actor_cast<result_type>(iter->second);
     // --
-    auto act = actor_cast<actor>(system_.spawn(replica_actor<T>, id));
+    auto act = actor_cast<actor>(system_.spawn(detail::replica_actor<T>, id));
     top_level_replicas_.emplace(id, act);
     return actor_cast<result_type>(act);
   }

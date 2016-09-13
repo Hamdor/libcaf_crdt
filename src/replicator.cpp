@@ -35,12 +35,12 @@ using namespace caf::replication;
 
 void replicator::start() {
   manager_ = make_replicator_actor(system_);
-  system_.registry().put(detail::replicator_atom::value,
+  system_.registry().put(replicator_atom::value,
                          actor_cast<strong_actor_ptr>(manager_));
 }
 
 void replicator::stop() {
-  system_.registry().erase(detail::replicator_atom::value);
+  system_.registry().erase(replicator_atom::value);
   scoped_actor self{system(), true};
   self->monitor(manager_);
   self->send_exit(manager_, exit_reason::user_shutdown);

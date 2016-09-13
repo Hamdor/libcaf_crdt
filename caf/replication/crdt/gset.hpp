@@ -49,9 +49,9 @@ struct gset_transaction : public base_transaction {
   using operation_t = gset_operations;
 
   /// Construct a new transaction
-  gset_transaction(std::string topic, node_id nid, operation_t operation,
+  gset_transaction(std::string topic, actor owner, operation_t operation,
                    std::set<T> values)
-    : base_transaction(std::move(topic), std::move(nid)),
+    : base_transaction(std::move(topic), std::move(owner)),
       op_(std::move(operation)),
       values_(std::move(values)) {
     // nop
@@ -115,19 +115,13 @@ struct gset_impl {
     return {std::move(delta)};
   }
 
-  /// Unite this and a delta State, this is usefull if `this` also represent
-  /// a delta State
-  void unite(const gset_impl<T>& delta) {
-    // For this type it is simple, we just have to merge `delta` into this.
-    // Topic is not used
-    merge("", delta);
-  }
-
   /// This is used to convert this delta-CRDT to CmRDT transactions
   /// @param topic for this transaction
-  transaction_t get_cmrdt_transactions(const std::string& topic) const {
+  /// @param creator these transactions where done
+  transaction_t get_cmrdt_transactions(const std::string& topic,
+                                       const actor& creator) const {
     // For this type its simple again, we just have to copy the set
-    return {topic, {}, operator_t::insertion, set_};
+    return {topic, creator, operator_t::insertion, set_};
   }
 
   /// @returns `true` if the state is empty
@@ -168,8 +162,8 @@ public:
   /// @returns a transaction
   transaction_t insert(const T& elem) {
     auto b = internal_emplace(elem);
-    auto result = transaction_t{topic(), node(), b ? operator_t::insertion
-                                                   : operator_t::none, {elem}};
+    auto result = transaction_t{topic(), owner(), b ? operator_t::insertion
+                                                  : operator_t::none, {elem}};
     publish(result);
     return result;
   }
@@ -245,7 +239,9 @@ private:
 template <class T>
 struct gset : public cmrdt::gset_impl<T> {
   /// Internal type of gset, this implementation is used between
-  using internal_type = delta::gset_impl<T>;
+  using internal_t = delta::gset_impl<T>;
+  /// Internal used for hierarchical propagation
+  using transaction_t = typename cmrdt::gset_impl<T>::transaction_t;
 };
 
 } // namespace crdt

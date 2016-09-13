@@ -21,7 +21,10 @@
 #ifndef CAF_REPLICATION_CRDT_BASE_TRANSACTION_HPP
 #define CAF_REPLICATION_CRDT_BASE_TRANSACTION_HPP
 
+#include <chrono>
 #include <string>
+
+#include <iostream>
 
 #include "caf/node_id.hpp"
 
@@ -29,29 +32,56 @@ namespace caf {
 namespace replication {
 namespace crdt {
 
+/// Base type for transactions
 struct base_transaction {
+  /// Define used clock
+  using clock = std::chrono::high_resolution_clock;
+  /// Time point, provided by clock
+  using time_point = std::chrono::time_point<clock>;
+
   /// @param topic for this transaction
-  /// @param nid node which generated this transaction
-  base_transaction(std::string topic, node_id nid) : topic_(std::move(topic)),
-                                                     nid_(std::move(nid)) {
+  /// @param creator the actor which created this transaction
+  base_transaction(std::string topic, actor creator)
+      : creator_{std::move(creator)}, time_{clock::now()},
+        topic_{std::move(topic)} {
     // nop
+  }
+
+  /// @returns a actor handle of the creator
+  inline const actor& creator() const { return creator_; }
+
+  /// @returns node which generated this transaction
+  inline node_id node() const { return creator_.node(); }
+
+  /// @returns the timestamp for this operations
+  inline const time_point& time() const { return time_; }
+
+  /// @returns a string representing either the nanoseconds since epoch,
+  /// or the ns since last boot.
+  inline std::string ticks() const {
+    std::stringstream ss;
+    ss << time_.time_since_epoch().count();
+    return ss.str();
   }
 
   /// @returns the topic of this transaction
   inline const std::string& topic() const { return topic_; }
 
-  /// @returns node which generated this transaction
-  inline const node_id& node() const { return nid_; }
+  /// @returns `true`, override this function if your type supports
+  /// a `empty()` implementation.
+  virtual bool empty() const { return false; }
 
   template <class Processor>
   friend void serialize(Processor& proc, base_transaction& x) {
+    proc & x.creator_;
+    proc & x.time_;
     proc & x.topic_;
-    proc & x.nid_;
   }
 
 private:
-  std::string topic_;
-  node_id nid_;
+  actor creator_;     /// Actor which created this transaction
+  time_point time_;   /// Time point at transaction
+  std::string topic_; /// Topic of transaction
 };
 
 } // namespace crdt

@@ -22,10 +22,9 @@
 #define CAF_REPLICATION_ALL_HPP
 
 #include "caf/replication/atom_types.hpp"
-#include "caf/replication/replica_actor.hpp"
-#include "caf/replication/publish_subscribe.hpp"
-
 #include "caf/replication/replicator.hpp"
+
+#include "caf/replication/interfaces/notifyable.hpp"
 
 #include "caf/replication/crdt/gset.hpp"
 #include "caf/replication/crdt/gcounter.hpp"

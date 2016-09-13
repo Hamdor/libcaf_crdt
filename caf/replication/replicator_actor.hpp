@@ -24,18 +24,17 @@
 #include <string>
 
 #include "caf/message.hpp"
-#include "caf/node_id.hpp"
 #include "caf/typed_actor.hpp"
-#include "caf/actor_system.hpp"
 
-#include "caf/replication/detail/internal_atoms.hpp"
+#include "caf/replication/atom_types.hpp"
 
 namespace caf {
 namespace replication {
 
 ///
 using replicator_actor = typed_actor<
-  reacts_to<int>
+  reacts_to<from_local_atom, std::string, message>,
+  reacts_to<from_remote_atom, std::string, message>
 >;
 
 ///@relates replicator_actor
