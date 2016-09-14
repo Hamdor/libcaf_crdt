@@ -56,7 +56,7 @@ struct replica_state {
   /// Buffer for transactions
   std::vector<transaction_t> transaction_buffer_;
   /// Local subscribed actors
-  std::set<notifyable_type<cmrdt_type>> subscribers_;
+  std::set<notifyable_t<cmrdt_type>> subscribers_;
   /// Tree relations, parent, childs
   publishable_t<State> tree_parent_;
   std::set<publishable_t<State>> tree_childs_;
@@ -93,7 +93,7 @@ replica_actor(injected_stateful_pointer<replica_actor_t, State> self,
   self->state.data_.set_topic(topic);
   return {
     // Handles subscribe requests from actors
-    [=](subscribe_atom, const notifyable_type<State>& subscriber) {
+    [=](subscribe_atom, const notifyable_t<State>& subscriber) {
       // Check if subscriber is in the same node, if not return a error
       if (self->node() != subscriber.node()) {
         // TODO: Return error if failed
@@ -106,7 +106,7 @@ replica_actor(injected_stateful_pointer<replica_actor_t, State> self,
       return std::make_tuple(initial_atom::value, std::move(t));
     },
     // Handle unsubscribe requests from actors
-    [=](unsubscribe_atom, const notifyable_type<State>& subscriber) {
+    [=](unsubscribe_atom, const notifyable_t<State>& subscriber) {
       self->state.subscribers_.erase(subscriber);
     },
     // Buffer and propagate transactions

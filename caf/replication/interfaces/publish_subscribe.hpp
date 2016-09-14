@@ -31,9 +31,9 @@ template <class State>
 using subscribable_t = typed_actor<
   typename replies_to<
     subscribe_atom,
-    notifyable_type<State>
+    notifyable_t<State>
   >::template with<initial_atom, State>,
-  reacts_to<unsubscribe_atom, notifyable_type<State>>>;
+  reacts_to<unsubscribe_atom, notifyable_t<State>>>;
 
 /// Interface definition for actors which support publish
 template <class State>

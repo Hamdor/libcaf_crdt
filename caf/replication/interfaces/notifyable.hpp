@@ -31,7 +31,7 @@ namespace replication {
 /// Interface definition for actors which work with CRDT States and support
 /// notifications.
 template <class State>
-using notifyable_type = typed_actor<
+using notifyable_t = typed_actor<
   reacts_to<initial_atom, State>,
   reacts_to<notify_atom, typename State::transaction_t>
 >;
