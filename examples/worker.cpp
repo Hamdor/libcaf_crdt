@@ -46,7 +46,7 @@ public:
 
   typename notifyable_t<State>::behavior_type make_behavior() override {
     return {
-      [&](initial_atom, const State& state) {
+      [&](initial_atom, State& state) {
         aout(this) << id_string_ << ": init" << endl;
         // Set initial state
         // The recieved state is configured to propagate update
@@ -79,7 +79,7 @@ private:
 };
 
 /// TODO: Implement a working config ....
-struct cfg : public actor_system_config {
+/*struct cfg : public actor_system_config {
   using duration_t = decltype(std::chrono::milliseconds(0));
   cfg() {
     load<io::middleman>().
@@ -115,7 +115,7 @@ struct cfg : public actor_system_config {
   //                      topic,       path,       interval
   std::vector<std::tuple<std::string, std::string, duration_t>> child_args;
   std::vector<std::tuple<std::string, std::string, duration_t, duration_t> root_args;
-};
+};*/
 
 int main(int argc, char* argv[]) {
   auto flush_interval  = std::chrono::seconds(1);
@@ -127,8 +127,8 @@ int main(int argc, char* argv[]) {
   //       sub1      sub2
   //      /
   //  hello
-  actor_system system{
-    cfg{}.add_replica<crdt::gset<int>>(topic, /*"/",*/ flush_interval,
+  /*actor_system system{
+    cfg{}.add_replica<crdt::gset<int>>(topic, "/", flush_interval,
                                        resync_interval)
          .add_replica<crdt::gset<int>>(topic, "/sub1", flush_interval,
                                        resync_interval)
@@ -137,7 +137,9 @@ int main(int argc, char* argv[]) {
          .add_replica<crdt::gset<int>>(topic, "/sub2", flush_interval,
                                        resync_interval)
          .load<io::middleman>()
-         .load<replication::replicator>()};
+         .load<replication::replicator>()};*/
+  actor_system system{actor_system_config{}.load<io::middleman>()
+                                           .load<replication::replicator>()};
   // --- Spawn some workers
   // Spawn a new tree:
   //       root
@@ -148,11 +150,31 @@ int main(int argc, char* argv[]) {
   auto worker1 = system.spawn<worker<crdt::gset<int>>>("worker1");
   auto worker2 = system.spawn<worker<crdt::gset<int>>>("worker2");
   auto worker3 = system.spawn<worker<crdt::gset<int>>>("worker3");
-  // --- Subscribe to updates ==> authority (host) + path (topic)
+
   auto& repl = system.replicator();
   repl.subscribe<crdt::gset<int>>("/rand", "/sub2", worker1);
   repl.subscribe<crdt::gset<int>>("/rand", "/sub1/subsub1", worker2);
   repl.subscribe<crdt::gset<int>>("/rand", "/sub1", worker3);
+
+  // gset<int>://videos/<ids>
+  // gset<string>://videos/<ids>
+/*
+  auto topic = system.replicator().topic<std::set<uri>>("all?t=gset<int>://videos/*");
+  auto topic = system.replicator().topic<crdt::gset<int>>("gset<int>://rand");
+  self.send(worker1, topic);
+  spawn([=](event_based_actor* self) {
+    self->join(topic, ""); // root (default)
+    self->join(topic, "w1"); // root.w1
+    self->join(topic, "w1.g1"); // root.w1.g1
+    self->send(topic, transaction{insert, 42});
+  });
+*/
+
+
+
+  // /likes/videos/<id>
+  // /likes/comments/<vid>/<id>
+
   // -- TODO: Move to unit test
   /*crdt::gcounter<int> b;
   std::cout << "Value: " << b.count() << ", " << (b += 2) << ", " << b.count()
