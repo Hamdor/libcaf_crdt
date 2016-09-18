@@ -27,8 +27,6 @@
 
 #include "caf/replication/atom_types.hpp"
 
-#include "caf/replication/interfaces/publish_subscribe.hpp"
-
 namespace caf {
 namespace replication {
 namespace crdt {

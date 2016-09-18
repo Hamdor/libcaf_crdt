@@ -18,25 +18,53 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
- #ifndef CAF_REPLICATION_INTERFACES_TREE_HPP
- #define CAF_REPLICATION_INTERFACES_TREE_HPP
+#ifndef CAF_REPLICATION_INTERFACES_HPP
+#define CAF_REPLICATION_INTERFACES_HPP
 
 #include "caf/typed_actor.hpp"
 
-#include "caf/replication/interfaces/publish_subscribe.hpp"
+#include "caf/replication/atom_types.hpp"
 
 namespace caf {
 namespace replication {
 
-/// Interface to build a tree by providing a set parent function and allow
-/// to have childs
+/// Interface definition for actors which work with CRDT States and support
+/// notifications.
 template <class State>
-using tree_t = typed_actor<
-  reacts_to<set_parent_atom, publishable_t<State>>,
-  reacts_to<add_child_atom, publishable_t<State>>
+using notifyable = typed_actor<
+  reacts_to<initial_atom, State>,
+  reacts_to<notify_atom, typename State::transaction_t>
 >;
+
+/// For composables with a tick handler
+using tick_t = typed_actor<
+  reacts_to<tick_atom>
+>;
+
+/// Interface definition for actors which support publish
+template <class State>
+using publishable = typename typed_actor<
+  reacts_to<publish_atom, typename State::transaction_t>
+>::template extend_with<tick_t>;
+
+/// Interface definition for actors which support subscribe/unsubscribe
+template <class State>
+using subscribable_t = typed_actor<
+  typename replies_to<
+    subscribe_atom,
+    notifyable<State>
+  >::template with<initial_atom, State>,
+  reacts_to<unsubscribe_atom, notifyable<State>>,
+  reacts_to<set_parent_atom, publishable<State>>,
+  reacts_to<add_child_atom, publishable<State>>
+>;
+
+/// Interface for actors, which support translation between CmRDT and
+/// CvRDTs
+template <class State>
+using translator_t = typename typed_actor<reacts_to<message>>::template extend_with<publishable<State>>;
 
 } // namespace replication
 } // namespace caf
 
- #endif // CAF_REPLICATION_INTERFACES_TREE_HPP
+#endif // CAF_REPLICATION_INTERFACES_HPP

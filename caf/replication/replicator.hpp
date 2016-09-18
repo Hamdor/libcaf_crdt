@@ -24,11 +24,10 @@
 #include "caf/config.hpp"
 #include "caf/actor_system.hpp"
 
+#include "caf/replication/interfaces.hpp"
 #include "caf/replication/replicator_actor.hpp"
 
-#include "caf/replication/detail/replica_actor.hpp"
 #include "caf/replication/detail/replicator_hooks.hpp"
-#include "caf/replication/detail/root_replica_actor.hpp"
 
 namespace caf {
 namespace replication {
@@ -67,7 +66,7 @@ private:
   // TODO: Make top level replicas spawn at initialisation
   // with actor system config
 
-  std::map<std::string, actor> translator_replicas_;
+  /*std::map<std::string, actor> translator_replicas_;
 
   std::vector<std::tuple<std::string, std::string, actor>> replicas_;
 
@@ -89,14 +88,14 @@ private:
     auto sub2 = system_.spawn(detail::replica_actor<T>, topic);
     auto subsub1 = system_.spawn(detail::replica_actor<T>, topic);
     // --- Build tree (set partens)
-    anon_send(root, set_parent_atom::value, actor_cast<publishable_t<T>>(translator));
-    anon_send(subsub1, set_parent_atom::value, actor_cast<publishable_t<T>>(sub1));
-    anon_send(sub1, set_parent_atom::value, actor_cast<publishable_t<T>>(root));
-    anon_send(sub2, set_parent_atom::value, actor_cast<publishable_t<T>>(root));
+    anon_send(root, set_parent_atom::value, actor_cast<publishable<T>>(translator));
+    anon_send(subsub1, set_parent_atom::value, actor_cast<publishable<T>>(sub1));
+    anon_send(sub1, set_parent_atom::value, actor_cast<publishable<T>>(root));
+    anon_send(sub2, set_parent_atom::value, actor_cast<publishable<T>>(root));
     // --- Build tree (set childs)
-    anon_send(sub1, add_child_atom::value, actor_cast<publishable_t<T>>(subsub1));
-    anon_send(root, add_child_atom::value, actor_cast<publishable_t<T>>(sub1));
-    anon_send(root, add_child_atom::value, actor_cast<publishable_t<T>>(sub2));
+    anon_send(sub1, add_child_atom::value, actor_cast<publishable<T>>(subsub1));
+    anon_send(root, add_child_atom::value, actor_cast<publishable<T>>(sub1));
+    anon_send(root, add_child_atom::value, actor_cast<publishable<T>>(sub2));
     // --- Add to maps
     translator_replicas_.emplace(topic, actor_cast<actor>(translator));
     replicas_.emplace_back(std::make_tuple(topic, std::string{"/"}, actor_cast<actor>(root)));
@@ -115,24 +114,24 @@ private:
           std::get<1>(tuple) == path)
           res = std::get<2>(tuple);
     return actor_cast<subscribable_t<T>>(res);
-  }
+  }*/
 
 public:
 
   ///
   template <class T>
   void subscribe(const std::string& id, const std::string& path,
-                 notifyable_t<T>& subscriber) {
-    auto replica = lookup_or_make<T>(id, path);
-    send_as(subscriber, replica, subscribe_atom::value, subscriber);
-}
+                 notifyable<T>& subscriber) {
+    //auto replica = lookup_or_make<T>(id, path);
+    //send_as(subscriber, replica, subscribe_atom::value, subscriber);
+  }
 
   ///
   template <class T>
   void unsubscribe(const std::string& id, const std::string& path,
-                   notifyable_t<T>& subscriber) {
-    auto replica = lookup_or_make<T>(id, path);
-    send_as(subscriber, replica, unsubscribe_atom::value, subscriber);
+                   notifyable<T>& subscriber) {
+    //auto replica = lookup_or_make<T>(id, path);
+    //send_as(subscriber, replica, unsubscribe_atom::value, subscriber);
   }
 };
 

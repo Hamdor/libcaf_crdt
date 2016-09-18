@@ -50,15 +50,11 @@ struct replicator_actor_impl : public replicator_actor::base {
 protected:
   behavior_type make_behavior() override {
     return {
-      [&](from_local_atom, const std::string& topic, const message& msg) {
+      [&](const std::string& topic, const message& msg) {
         // TODO: We recieved a message from our root_replica, forward to other
         // nodes...
         // for (auto& neighbor : neighbors)
         //   send(neighbor, from_remote_atom::value, topic, msg);
-      },
-      [&](from_remote_atom, const std::string& topic, const message& msg) {
-        // TODO: We recieved a remote message, we have to forward the message
-        // to our root_replica
       }
     };
   }

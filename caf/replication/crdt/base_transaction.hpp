@@ -39,6 +39,11 @@ struct base_transaction {
   /// Time point, provided by clock
   using time_point = std::chrono::time_point<clock>;
 
+  base_transaction() : creator_{unsafe_actor_handle_init},
+                       time_{}, topic_{} {
+    // nop
+  }
+
   /// @param topic for this transaction
   /// @param creator the actor which created this transaction
   base_transaction(std::string topic, actor creator)

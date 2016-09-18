@@ -18,25 +18,36 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_INTERFACES_NOTIFYABLE_HPP
-#define CAF_REPLICATION_INTERFACES_NOTIFYABLE_HPP
+#include "caf/all.hpp"
 
-#include "caf/typed_actor.hpp"
+#include "caf/replication/detail/composables/translator.hpp"
+#include "caf/replication/detail/composables/subscribable.hpp"
+#include "caf/replication/detail/composables/publisher.hpp"
 
-#include "caf/replication/atom_types.hpp"
+#include "caf/replication/detail/replica_actor.hpp"
 
-namespace caf {
-namespace replication {
+#include "caf/replication/crdt/gset.hpp"
+#include "caf/replication/crdt/gcounter.hpp"
 
-/// Interface definition for actors which work with CRDT States and support
-/// notifications.
-template <class State>
-using notifyable_t = typed_actor<
-  reacts_to<initial_atom, State>,
-  reacts_to<notify_atom, typename State::transaction_t>
->;
+using namespace caf;
+using namespace replication;
+using namespace replication::detail;
 
-} // namespace replication
-} // namespace caf
-
-#endif // CAF_REPLICATION_INTERFACES_NOTIFYABLE_HPP
+int main() {
+  auto cfg = actor_system_config{};
+  actor_system system{cfg};
+  // ------
+  system.spawn<composed_behavior<subscribable<crdt::gcounter<int>>>>();
+  system.spawn<composed_behavior<translator<crdt::gcounter<int>>>>();
+  system.spawn<composed_behavior<publisher<crdt::gcounter<int>>>>();
+  // ------
+  system.spawn<composed_behavior<subscribable<crdt::gset<int>>>>();
+  system.spawn<composed_behavior<translator<crdt::gset<int>>>>();
+  system.spawn<composed_behavior<publisher<crdt::gset<int>>>>();
+  // -------
+  system.spawn<root_replica_actor<crdt::gset<int>>>();
+  system.spawn<replica_actor<crdt::gset<int>>>();
+  // -------
+  system.spawn<root_replica_actor<crdt::gcounter<int>>>();
+  system.spawn<replica_actor<crdt::gcounter<int>>>();
+}

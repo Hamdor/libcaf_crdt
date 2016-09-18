@@ -49,6 +49,9 @@ using set_parent_atom = atom_constant<atom("setparent")>;
 /// @private
 using add_child_atom = atom_constant<atom("addchild")>;
 
+/// @private
+using tick_atom = atom_constant<atom("tick")>;
+
 } // namespace replication
 } // namespace caf
 

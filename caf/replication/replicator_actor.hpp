@@ -33,8 +33,7 @@ namespace replication {
 
 ///
 using replicator_actor = typed_actor<
-  reacts_to<from_local_atom, std::string, message>,
-  reacts_to<from_remote_atom, std::string, message>
+  reacts_to<std::string, message>
 >;
 
 ///@relates replicator_actor

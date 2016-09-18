@@ -28,8 +28,6 @@
 #include "caf/io/all.hpp"
 #include "caf/replication/all.hpp"
 
-#include "caf/replication/detail/root_replica_actor.hpp"
-
 using namespace std;
 using namespace caf;
 using namespace caf::replication;
@@ -37,14 +35,14 @@ using namespace caf::replication;
 /// Example worker, supports the `notifyabe_type<>` interface, to fetch data
 /// from local top level replica.
 template <class State>
-class worker : public notifyable_t<State>::base {
+class worker : public notifyable<State>::base {
 public:
   worker(actor_config& cfg, std::string some_str)
-      : notifyable_t<State>::base(cfg), id_string_(std::move(some_str)) {
+      : notifyable<State>::base(cfg), id_string_(std::move(some_str)) {
     // nop
   }
 
-  typename notifyable_t<State>::behavior_type make_behavior() override {
+  typename notifyable<State>::behavior_type make_behavior() override {
     return {
       [&](initial_atom, State& state) {
         aout(this) << id_string_ << ": init" << endl;

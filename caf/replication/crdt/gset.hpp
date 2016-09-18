@@ -57,6 +57,8 @@ struct gset_transaction : public base_transaction {
     // nop
   }
 
+  virtual ~gset_transaction() = default;
+
   /// Returns the operation of this transaction
   inline const operation_t& operation() const { return op_; }
 
