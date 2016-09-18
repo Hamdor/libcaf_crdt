@@ -29,6 +29,8 @@ namespace caf {
 namespace replication {
 namespace detail {
 
+template <class T> class translator; // TODO: Why need forward declaration here?
+
 /// Type of root replicas
 template <class T>
 using root_replica_actor = composed_behavior<

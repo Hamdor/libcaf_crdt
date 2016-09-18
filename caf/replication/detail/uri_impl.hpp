@@ -66,15 +66,9 @@ class uri_impl : public ref_counted {
       case states::parse_slash_two:
         return check(states::parse_topic, path_delim);
       case states::parse_topic:
-        path_buffer_ += c;
+        path_ += c;
         if (c == wildcard)
           state_ = states::parse_end;
-        if (c == path_delim) {
-          if (path_buffer_.empty())
-            return false;
-          path_.emplace_back(path_buffer_);
-          path_buffer_.clear();
-        }
         return true;
       case states::parse_end:
         return false;
@@ -86,12 +80,9 @@ class uri_impl : public ref_counted {
     state_ = states::parse_scheme;
     for (size_t i = 0; i < what.size(); ++i) {
       char c = std::tolower(what[i]);
-      uri_ += c;
       if (!consume(c))
         return false;
     }
-    if (!path_buffer_.empty())
-      path_.emplace_back(path_buffer_);
     if (scheme_.empty() || path_.empty())
       return false;
     return true;
@@ -100,7 +91,10 @@ class uri_impl : public ref_counted {
 public:
   static intrusive_ptr<uri_impl> from(const std::string& what) {
     auto result = make_counted<uri_impl>();
-    result->valid_ = result->parse(what);
+    if (!result->parse(what)) {
+      result->path_.clear();
+      result->scheme_.clear();
+    }
     return result;
   }
 
@@ -110,31 +104,15 @@ public:
 
   inline const std::string& scheme() const { return scheme_; }
 
-  inline std::string path() const {
-    std::string path;
-    for (auto& step : path_)
-      path += step;
-    return path;
-  }
+  inline const std::string& path() const { return path_; }
 
-  inline size_t path_deep() const { return path_.size(); }
+  inline std::string to_string() const { return scheme_ + "://" + path_; }
 
-  inline const std::string& path_at(size_t deep) const {
-    return deep < path_deep() ? path_[deep] : path_buffer_;
-  }
-
-  inline const std::string& to_string() const { return uri_; }
-
-  inline bool valid() const { return valid_; }
+  inline bool valid() const { return !path_.empty() && !scheme_.empty(); }
 
 private:
-  std::string path_buffer_;
-  std::vector<std::string> path_;
-
+  std::string path_;
   std::string scheme_;
-  std::string uri_;
-
-  bool valid_;
 };
 
 } // namespace detail

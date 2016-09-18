@@ -51,20 +51,21 @@ public:
   inline const std::string& scheme() const { return impl_->scheme(); }
 
   /// @returns the path of the uri
-  inline std::string path() const { return impl_->path(); }
-
-  /// @returns the deep of the path
-  inline size_t path_deep() const { return impl_->path_deep(); }
-
-  /// @param deep to return
-  /// @returns the path at the given deep
-  inline const std::string& path_at(size_t deep) const {
-    return impl_->path_at(deep);
-  }
+  inline const std::string& path() const { return impl_->path(); }
 
   /// @returns the complete uri as string
-  inline const std::string& to_string() const {
-    return impl_->to_string();
+  inline std::string to_string() const { return impl_->to_string(); }
+
+  /// TODO
+  template <class T>
+  bool match_rtti(std::type_info* rtti) const {
+    return false;
+  }
+
+  /// TODO
+  template <class T>
+  std::type_info* get_rtti() const {
+    return nullptr;
   }
 
 private:

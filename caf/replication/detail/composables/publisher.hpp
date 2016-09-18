@@ -59,8 +59,10 @@ public:
 
   /// Send update buffer to our parent
   result<void> operator()(tick_atom) override {
-    // TODO: Send delayed message to self
     this->flush_cmrdt_buffer_to(this, this->parent(), publish_atom::value);
+    // TODO: Make configurable
+    this->self->delayed_send(this->self, std::chrono::seconds(1),
+                             tick_atom::value);
     return unit;
   }
 };

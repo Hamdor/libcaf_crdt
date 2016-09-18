@@ -53,11 +53,11 @@ public:
       }
       // TODO: Add other handler and log errors (should not happen)
     );
-    auto tmp_delta = this->merge("", delta);
+    auto tmp_delta = this->merge(this->topic(), delta);
     if (tmp_delta.empty())
       return unit;
-    // TODO: Add topic
-    auto t = tmp_delta.get_cmrdt_transactions("", actor_cast<actor>(this->self));
+    auto t = tmp_delta.get_cmrdt_transactions(this->topic(),
+                                              actor_cast<actor>(this->self));
     // Send to subscribers
     this->publish_all(this, notify_atom::value, t);
     // Send to tree childs
@@ -86,9 +86,9 @@ public:
   result<void> operator()(tick_atom) override {
     auto repl = this->self->system().replicator().actor_handle();
     // TODO: Send full state or delta?
-    // TODO: Add topic at ""
     this->flush_cvrdt_buffer_to(this, repl, this->topic(), false);
-    // TODO: Self send delayed message with tick
+    // TODO: Make configurable
+    this->self->send_delayed(this->self, std::chrono::seconds(1), tick_atom::value);
     return unit;
   }
 };

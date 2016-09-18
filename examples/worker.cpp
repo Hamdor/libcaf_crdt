@@ -154,9 +154,11 @@ int main(int argc, char* argv[]) {
   repl.subscribe<crdt::gset<int>>("/rand", "/sub1/subsub1", worker2);
   repl.subscribe<crdt::gset<int>>("/rand", "/sub1", worker3);
 
+/*
   // gset<int>://videos/<ids>
   // gset<string>://videos/<ids>
-/*
+  // /likes/videos/<id>
+  // /likes/comments/<vid>/<id>
   auto topic = system.replicator().topic<std::set<uri>>("all?t=gset<int>://videos/*");
   auto topic = system.replicator().topic<crdt::gset<int>>("gset<int>://rand");
   self.send(worker1, topic);
@@ -167,16 +169,4 @@ int main(int argc, char* argv[]) {
     self->send(topic, transaction{insert, 42});
   });
 */
-
-
-
-  // /likes/videos/<id>
-  // /likes/comments/<vid>/<id>
-
-  // -- TODO: Move to unit test
-  /*crdt::gcounter<int> b;
-  std::cout << "Value: " << b.count() << ", " << (b += 2) << ", " << b.count()
-            << ", " << b++ << ", " << b.count() << ", " << ++b << std::endl;
-  // Bleh...
-  system.spawn(caf::replication::detail::root_replica_actor<crdt::gset<int>>, "hello");*/
 }

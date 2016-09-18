@@ -20,6 +20,9 @@
 
 #include "caf/replication/uri.hpp"
 
+#include "caf/replication/topic.hpp"
+
+#include <set>
 #include <iostream>
 
 using namespace caf::replication;
@@ -42,6 +45,7 @@ int main() {
     std::cout << "-----------------------------------------------------"
               << std::endl;
   }
-
+  // ----
+  //topic<std::set<uri>>("bleh");
   return 0;
 }

@@ -24,9 +24,12 @@
 #include "caf/config.hpp"
 #include "caf/actor_system.hpp"
 
+#include "caf/replication/uri.hpp"
 #include "caf/replication/interfaces.hpp"
+
 #include "caf/replication/replicator_actor.hpp"
 
+#include "caf/replication/detail/replica_actor.hpp"
 #include "caf/replication/detail/replicator_hooks.hpp"
 
 namespace caf {
@@ -66,7 +69,7 @@ private:
   // TODO: Make top level replicas spawn at initialisation
   // with actor system config
 
-  /*std::map<std::string, actor> translator_replicas_;
+  std::map<std::string, actor> translator_replicas_;
 
   std::vector<std::tuple<std::string, std::string, actor>> replicas_;
 
@@ -82,13 +85,11 @@ private:
     //   /
     // subsub1
     // --- Spawn actors
-    auto translator = system_.spawn(detail::root_replica_actor<T>, topic);
-    auto root = system_.spawn(detail::replica_actor<T>, topic);
-    auto sub1 = system_.spawn(detail::replica_actor<T>, topic);
-    auto sub2 = system_.spawn(detail::replica_actor<T>, topic);
-    auto subsub1 = system_.spawn(detail::replica_actor<T>, topic);
+    auto root = system_.spawn<detail::root_replica_actor<T>>(/*, topic*/);
+    auto sub1 = system_.spawn<detail::replica_actor<T>>(/*, topic*/);
+    auto sub2 = system_.spawn<detail::replica_actor<T>>(/*, topic*/);
+    auto subsub1 = system_.spawn<detail::replica_actor<T>>(/*, topic*/);
     // --- Build tree (set partens)
-    anon_send(root, set_parent_atom::value, actor_cast<publishable<T>>(translator));
     anon_send(subsub1, set_parent_atom::value, actor_cast<publishable<T>>(sub1));
     anon_send(sub1, set_parent_atom::value, actor_cast<publishable<T>>(root));
     anon_send(sub2, set_parent_atom::value, actor_cast<publishable<T>>(root));
@@ -96,8 +97,12 @@ private:
     anon_send(sub1, add_child_atom::value, actor_cast<publishable<T>>(subsub1));
     anon_send(root, add_child_atom::value, actor_cast<publishable<T>>(sub1));
     anon_send(root, add_child_atom::value, actor_cast<publishable<T>>(sub2));
+    // --- Initialy send tick atoms (TODO)
+    anon_send(subsub1, tick_atom::value);
+    anon_send(sub1, tick_atom::value);
+    anon_send(sub2, tick_atom::value);
+    anon_send(root, tick_atom::value);
     // --- Add to maps
-    translator_replicas_.emplace(topic, actor_cast<actor>(translator));
     replicas_.emplace_back(std::make_tuple(topic, std::string{"/"}, actor_cast<actor>(root)));
     replicas_.emplace_back(std::make_tuple(topic, std::string{"/sub1"}, actor_cast<actor>(sub1)));
     replicas_.emplace_back(std::make_tuple(topic, std::string{"/sub1/subsub1"}, actor_cast<actor>(subsub1)));
@@ -114,24 +119,42 @@ private:
           std::get<1>(tuple) == path)
           res = std::get<2>(tuple);
     return actor_cast<subscribable_t<T>>(res);
-  }*/
+  }
 
 public:
+
+  ///
+  /*template <class T>
+  T topic(const std::string& what) const {
+    // TODO: To lowercase
+    // TODO: Parse what
+    T result;
+    if (what == "all") {
+      // TODO: Add all topics
+    } else {
+      uri u{what};
+      if (u.valid()) {
+        // TODO: Get type (RTTI) from scheme
+
+      }
+    }
+    return {};
+  }*/
 
   ///
   template <class T>
   void subscribe(const std::string& id, const std::string& path,
                  notifyable<T>& subscriber) {
-    //auto replica = lookup_or_make<T>(id, path);
-    //send_as(subscriber, replica, subscribe_atom::value, subscriber);
+    auto replica = lookup_or_make<T>(id, path);
+    send_as(subscriber, replica, subscribe_atom::value, subscriber);
   }
 
   ///
   template <class T>
   void unsubscribe(const std::string& id, const std::string& path,
                    notifyable<T>& subscriber) {
-    //auto replica = lookup_or_make<T>(id, path);
-    //send_as(subscriber, replica, unsubscribe_atom::value, subscriber);
+    auto replica = lookup_or_make<T>(id, path);
+    send_as(subscriber, replica, unsubscribe_atom::value, subscriber);
   }
 };
 
