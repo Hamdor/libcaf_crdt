@@ -88,7 +88,7 @@ public:
     // TODO: Send full state or delta?
     this->flush_cvrdt_buffer_to(this, repl, this->topic(), false);
     // TODO: Make configurable
-    this->self->send_delayed(this->self, std::chrono::seconds(1), tick_atom::value);
+    this->self->delayed_send(this->self, std::chrono::seconds(1), tick_atom::value);
     return unit;
   }
 };

@@ -21,6 +21,7 @@
 #ifndef CAF_REPLICATION_URI_HPP
 #define CAF_REPLICATION_URI_HPP
 
+#include "caf/actor_system.hpp"
 #include "caf/intrusive_ptr.hpp"
 
 #include "caf/replication/detail/uri_impl.hpp"
@@ -44,6 +45,20 @@ public:
     // nop
   }
 
+  /// Creates a uri from a path string and a type
+  /// @param system which knows type T
+  /// @param path of uri
+  template <class T>
+  uri(T*, const actor_system& system, const std::string& path) {
+    auto nr = type_nr<T>::value;
+    auto* name = (nr != 0) ? system.types().portable_name(nr, nullptr)
+                           : system.types().portable_name(0, &typeid(T));
+    std::string divider = {":/"};
+    if (*path.begin() != '/')
+      divider += '/';
+    impl_ = impl::from((name ? *name : "<unknown>") + divider + path);
+  }
+
   /// @returns `true` if a valid uri is loaded otherwise `false`.
   bool valid() const { return impl_->valid(); }
 
@@ -56,16 +71,13 @@ public:
   /// @returns the complete uri as string
   inline std::string to_string() const { return impl_->to_string(); }
 
-  /// TODO
+  /// @returns `true` if type is valid in our actor system
   template <class T>
-  bool match_rtti(std::type_info* rtti) const {
-    return false;
-  }
-
-  /// TODO
-  template <class T>
-  std::type_info* get_rtti() const {
-    return nullptr;
+  bool match_rtti(const actor_system& system) const {
+    auto nr = type_nr<T>::value;
+    auto* name = (nr != 0) ? system.types().portable_name(nr, nullptr)
+                           : system.types().portable_name(0, &typeid(T));
+    return name != nullptr && std::string{*name} == impl_->scheme();
   }
 
 private:

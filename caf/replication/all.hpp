@@ -21,6 +21,8 @@
 #ifndef CAF_REPLICATION_ALL_HPP
 #define CAF_REPLICATION_ALL_HPP
 
+#include "caf/replication/uri.hpp"
+#include "caf/replication/topic.hpp"
 #include "caf/replication/atom_types.hpp"
 #include "caf/replication/interfaces.hpp"
 #include "caf/replication/replicator.hpp"

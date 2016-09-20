@@ -18,51 +18,38 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/all.hpp"
-
-#include "caf/replication/all.hpp"
+#ifndef CAF_REPLICATION_TOPIC_HPP
+#define CAF_REPLICATION_TOPIC_HPP
 
 #include "caf/replication/uri.hpp"
-#include "caf/replication/topic.hpp"
 
-#include <set>
-#include <iostream>
+namespace caf {
+namespace replication {
 
-using namespace caf;
-using namespace caf::replication;
+/// A topic is defined by a scheme (type) and a path, it contains
+/// a underlying uri.
+template <class T>
+struct topic {
+  /// Underlying type of topic
+  using scheme_type = T;
 
-struct some_crap {};
-
-int main() {
-  std::string tests[] = {"gset<int>://videos/*",
-                         "gset<string>://videos/bleh",
-                         "gset<string>://videos",
-                         "gset<int>://rand",
-                         "gcounter<size_t>://views/videos/filmchen/*"
-  };
-  for (auto& what : tests) {
-    uri u{what};
-    if (u.valid())
-      std::cout << "scheme/type: " << u.scheme()    << std::endl
-                << "path/topic:  " << u.path()      << std::endl
-                << "uri:         " << u.to_string() << std::endl;
-    else
-      std::cout << "invalid uri (" << what << ")" << std::endl;
-    std::cout << "-----------------------------------------------------"
-              << std::endl;
+  /// Creates a new topic
+  /// @param system the actor system which knows type T
+  /// @param what valid path
+  topic(const actor_system& system, const std::string& what)
+      : uri_(static_cast<T*>(nullptr), system, what) {
+    // nop
   }
-  // ----
-  auto cfg = actor_system_config{};
-  cfg.add_message_type<crdt::gset<int>>("gset<int>");
-  actor_system system{cfg};
-  // ----
-  std::cout << topic<crdt::gset<int>>(system, "/rand").get_uri().to_string()
-            << std::endl;
-  std::cout << topic<some_crap>(system, "/rand").get_uri().to_string()
-            << std::endl;
-  auto u = uri{"gset<int>://rand"};
-  std::cout << std::boolalpha << "assumed (true, false): "
-            << u.match_rtti<crdt::gset<int>>(system) << ", "
-            << u.match_rtti<crdt::gset<float>>(system) << std::endl;
-  return 0;
-}
+
+  /// Get the underlying uri
+  const uri& get_uri() const { return uri_; }
+
+private:
+  uri uri_; /// Underlying URI
+};
+
+} // namespace replication
+} // namespace caf
+
+
+#endif // CAF_REPLICATION_TOPIC_HPP
