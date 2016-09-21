@@ -23,7 +23,7 @@
 
 #include <string>
 
-#include "caf/message.hpp"
+#include "caf/fwd.hpp"
 #include "caf/typed_actor.hpp"
 
 #include "caf/replication/atom_types.hpp"
@@ -31,9 +31,13 @@
 namespace caf {
 namespace replication {
 
-///
+/// Interface of replicator
 using replicator_actor = typed_actor<
-  reacts_to<std::string, message>
+  reacts_to<std::string, message>,
+  reacts_to<tick_atom>,
+  reacts_to<new_direct_con, node_id>,
+  reacts_to<new_indirect_con, node_id>,
+  reacts_to<con_lost, node_id>
 >;
 
 ///@relates replicator_actor

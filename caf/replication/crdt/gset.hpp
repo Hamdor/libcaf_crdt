@@ -26,6 +26,8 @@
 
 #include "caf/node_id.hpp"
 
+#include "caf/detail/comparable.hpp"
+
 #include "caf/replication/crdt/base_datatype.hpp"
 #include "caf/replication/crdt/base_transaction.hpp"
 
@@ -78,7 +80,7 @@ private:
 
 namespace delta {
 
-/// This state is hold by top level replica, the CRDT is implementet as
+/// This state is hold by top level replica, the CRDT is implemented as
 /// delta-CRDT.
 /// @private
 template <class T>
@@ -159,6 +161,12 @@ public:
   /// Mutable operations will trigger this type
   using transaction_t = gset_transaction<T>;
 
+  gset_impl() = default;
+
+  gset_impl(std::set<T> set) : set_(std::move(set)) {
+    // nop
+  }
+
   /// Insert a element into this gset
   /// @param elem to insert
   /// @returns a transaction
@@ -179,7 +187,8 @@ public:
       if (internal_emplace(elem))
         insertions.emplace(elem);
     }
-    auto result = {operator_t::insertion, std::move(insertions), topic()};
+    auto result = transaction_t{topic(), owner(), operator_t::insertion,
+                                std::move(insertions)};
     publish(result);
     return result;
   }
@@ -225,6 +234,12 @@ public:
     proc & x.set_;
   }
 
+  intptr_t compare(const gset_impl<T>& other) const noexcept {
+    if (set_ == other.set_)     return 0;
+    else if (set_ < other.set_) return -1;
+    else                        return 1;
+  }
+
 private:
   /// @private
   inline bool internal_emplace(const T& elem) {
@@ -239,8 +254,16 @@ private:
 
 /// Implementation of a grow-only set (GSet)
 template <class T>
-struct gset : public cmrdt::gset_impl<T> {
-  /// Internal type of gset, this implementation is used between
+struct gset : public cmrdt::gset_impl<T>,
+              public caf::detail::comparable<gset<T>> {
+
+  gset() = default;
+
+  gset(std::set<T> set) : cmrdt::gset_impl<T>(std::move(set)) {
+    // nop
+  }
+
+  /// Internal type of gset
   using internal_t = delta::gset_impl<T>;
   /// Internal used for hierarchical propagation
   using transaction_t = typename cmrdt::gset_impl<T>::transaction_t;

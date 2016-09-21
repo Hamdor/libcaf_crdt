@@ -29,7 +29,7 @@ namespace caf {
 namespace replication {
 namespace detail {
 
-///
+/// IO-Hooks used by replicator
 class replicator_hooks : public io::hook {
 public:
   replicator_hooks(actor_system& sys);
@@ -47,9 +47,6 @@ public:
   void before_shutdown_cb() override;
 
 private:
-
-  void add_new_node(const node_id& nid);
-
   scoped_actor self_;
   actor_system& sys_;
 };

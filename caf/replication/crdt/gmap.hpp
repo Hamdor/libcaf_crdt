@@ -142,6 +142,9 @@ struct gmap_impl {
   /// Clear the internal map
   inline void clear() { map_.clear(); }
 
+  /// Get reference to internal map
+  inline const std::map<Key, Value>& map() const { return map_; }
+
   /// @private
   template <class Processor>
   friend void serialize(Processor& proc, gmap_impl<Key, Value>& x) {
@@ -177,11 +180,19 @@ public:
 
   /// Assign a new value to key. If a key/value pair already exist,
   /// the new value, has to be bigger than the old value to win.
-  void assign(const Key& key, const Value& value) {
+  /// @return `true` if the new value was assigned
+  ///         `false` otherwise.
+  bool assign(const Key& key, const Value& value) {
     auto iter = map_.find(key);
-    if (iter == map_.end() || iter->second < value)
+    if (iter == map_.end() || iter->second < value) {
       internal_assign(key, value);
+      return true;
+    }
+    return false;
   }
+
+  /// @returns a reference to internal map
+  inline const std::map<Key, Value> map() const { return map_; }
 
 private:
   void internal_assign(const Key& key, const Value& value) {

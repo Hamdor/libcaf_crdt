@@ -49,6 +49,7 @@ void replicator::stop() {
 }
 
 void replicator::init(actor_system_config& cfg) {
+  // TODO: Add all message types...
   cfg.add_hook_type<detail::replicator_hooks>().
       add_message_type<std::unordered_map<std::string, message>>("merged_updates").
       add_message_type<std::unordered_map<std::string, std::vector<message>>>("unmerged_messages");

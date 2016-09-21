@@ -38,12 +38,6 @@ using notify_atom = atom_constant<atom("notify")>;
 using replicator_atom = atom_constant<atom("replicator")>;
 
 /// @private
-using from_local_atom = atom_constant<atom("fromlocal")>;
-
-/// @private
-using from_remote_atom = atom_constant<atom("fromremote")>;
-
-/// @private
 using set_parent_atom = atom_constant<atom("setparent")>;
 
 /// @private
@@ -51,6 +45,20 @@ using add_child_atom = atom_constant<atom("addchild")>;
 
 /// @private
 using tick_atom = atom_constant<atom("tick")>;
+
+// -------- Replicator communication atoms -------------------------------------
+
+/// @private
+using new_direct_con = atom_constant<atom("directnode")>;
+
+/// @private
+using new_indirect_con = atom_constant<atom("indirectno")>;
+
+/// @private
+using con_lost = atom_constant<atom("conlost")>;
+
+/// @private
+// TODO: Shutdown atom?
 
 } // namespace replication
 } // namespace caf

@@ -154,6 +154,14 @@ int main(int argc, char* argv[]) {
   repl.subscribe<crdt::gset<int>>("/rand", "/sub1/subsub1", worker2);
   repl.subscribe<crdt::gset<int>>("/rand", "/sub1", worker3);
 
+  crdt::gmap<std::string, int> bleh;
+  bleh.assign("hallo", 4);
+  bleh.assign("hallo", 3);
+  bleh.assign("hallo", 56);
+  bleh.assign("z", -2);
+  std::cout << bleh.at("z") << std::endl;
+  std::cout << bleh.at("hallo") << std::endl;
+
 /*
   // gset<int>://videos/<ids>
   // gset<string>://videos/<ids>
