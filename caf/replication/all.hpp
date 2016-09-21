@@ -27,6 +27,7 @@
 #include "caf/replication/interfaces.hpp"
 #include "caf/replication/replicator.hpp"
 
+#include "caf/replication/crdt/gmap.hpp"
 #include "caf/replication/crdt/gset.hpp"
 #include "caf/replication/crdt/gcounter.hpp"
 
