@@ -53,9 +53,7 @@ public:
     auto nr = type_nr<T>::value;
     auto* name = (nr != 0) ? system.types().portable_name(nr, nullptr)
                            : system.types().portable_name(0, &typeid(T));
-    std::string divider = {":/"};
-    if (*path.begin() != '/')
-      divider += '/';
+    std::string divider = ":/";
     impl_ = impl::from((name ? *name : "<unknown>") + divider + path);
   }
 

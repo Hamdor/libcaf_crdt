@@ -18,24 +18,53 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE lamport_clock
+#define CAF_SUITE uri
 #include "caf/test/unit_test.hpp"
 
-#include "caf/replication/lamport_clock.hpp"
+#include "caf/all.hpp"
 
+#include "caf/replication/uri.hpp"
+#include "caf/replication/topic.hpp"
+
+using namespace caf;
 using namespace caf::replication;
 
-CAF_TEST(compare) {
-  lamport_clock l1, l2;
-  CAF_CHECK(l1 == l2);
-  CAF_CHECK(!(l1 < l2));
-  CAF_CHECK(!(l1 > l2));
-  CAF_CHECK(l1 == l2.time());
-  // ...
-  CAF_CHECK(l1.increment() == 1);
-  CAF_CHECK(l1 != l2);
-  CAF_CHECK(l1 > l2);
-  CAF_CHECK(l1 == l2.increment());
-  l1.merge({42});
-  CAF_CHECK(l1 == 42);
+CAF_TEST(uri_parse) {
+  std::string valid[] = {"gset<int>://videos/*",
+                         "gset<string>://videos/bleh",
+                         "gset<string>://videos",
+                         "gset<int>://rand",
+                         "gcounter<size_t>://views/videos/filmchen/*",
+                         "lww_reg<int>://"
+  };
+  std::string invalid[] = {"",
+                           "*",
+                           "://",
+                           "gset<int>://rand/*/"
+  };
+  for (auto& what : valid) CAF_CHECK(uri{what}.valid());
+  for (auto& what : invalid) CAF_CHECK(!uri{what}.valid());
+}
+
+CAF_TEST(uri_rrti) {
+  struct a {};
+  auto cfg = actor_system_config{};
+  cfg.add_message_type<a>("a");
+  actor_system system{cfg};
+  CAF_CHECK(uri{"a://"}.match_rtti<a>(system));
+}
+
+CAF_TEST(topic) {
+  struct a {};
+  auto cfg = actor_system_config{};
+  cfg.add_message_type<a>("a");
+  actor_system system{cfg};
+  // ---- Test topics
+  topic<a> t(system, "/rand");
+  //    ^             ^
+  //    +-- Type      +--- Path
+  CAF_CHECK(t.get_uri().to_string() == "a://rand");
+  // --
+  topic<a> t2(system, "/");
+  CAF_CHECK(t2.get_uri().to_string() == "a://");
 }

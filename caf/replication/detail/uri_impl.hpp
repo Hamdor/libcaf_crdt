@@ -39,8 +39,7 @@ class uri_impl : public ref_counted {
 
   enum class states {
     parse_scheme,
-    parse_slash_one,
-    parse_slash_two,
+    parse_slash,
     parse_topic,
     parse_end
   } state_;
@@ -57,13 +56,11 @@ class uri_impl : public ref_counted {
     switch(state_) {
       case states::parse_scheme:
         if (c == ':')
-          state_ = states::parse_slash_one;
+          state_ = states::parse_slash;
         else
           scheme_ += c;
         return true;
-      case states::parse_slash_one:
-        return check(states::parse_slash_two, path_delim);
-      case states::parse_slash_two:
+      case states::parse_slash:
         return check(states::parse_topic, path_delim);
       case states::parse_topic:
         path_ += c;
@@ -83,9 +80,7 @@ class uri_impl : public ref_counted {
       if (!consume(c))
         return false;
     }
-    if (scheme_.empty() || path_.empty())
-      return false;
-    return true;
+    return !scheme_.empty() && !path_.empty();
   }
 
 public:
@@ -106,7 +101,7 @@ public:
 
   inline const std::string& path() const { return path_; }
 
-  inline std::string to_string() const { return scheme_ + "://" + path_; }
+  inline std::string to_string() const { return scheme_ + ":/" + path_; }
 
   inline bool valid() const { return !path_.empty() && !scheme_.empty(); }
 
