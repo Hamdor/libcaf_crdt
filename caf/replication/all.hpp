@@ -30,5 +30,6 @@
 #include "caf/replication/crdt/gmap.hpp"
 #include "caf/replication/crdt/gset.hpp"
 #include "caf/replication/crdt/gcounter.hpp"
+#include "caf/replication/crdt/lww_register.hpp"
 
 #endif // CAF_REPLICATION_ALL_HPP
