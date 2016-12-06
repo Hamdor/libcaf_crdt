@@ -59,7 +59,7 @@ public:
   inline const actor& owner() const { return owner_; }
 
   /// @returns local node
-  inline node_id node() const { return owner_.node(); }
+  inline node_id node() const { return owner_ ? owner_.node() : node_id{}; }
 
   /// @private
   inline void set_owner(actor act) { owner_ = std::move(act); }
