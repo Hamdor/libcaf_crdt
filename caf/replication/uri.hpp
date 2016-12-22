@@ -24,15 +24,20 @@
 #include "caf/actor_system.hpp"
 #include "caf/intrusive_ptr.hpp"
 
+#include "caf/detail/comparable.hpp"
+
 #include "caf/replication/detail/uri_impl.hpp"
 
 namespace caf {
 namespace replication {
 
 /// Uri implementation, that supports a scheme and a path.
-class uri {
+class uri : public caf::detail::comparable<uri> {
   using impl = detail::uri_impl;
 public:
+
+  uri() = default;
+
   /// Creates a uri from a string
   /// @param what string that contains a uri
   uri(const std::string& what) : impl_(impl::from(what)) {
@@ -78,12 +83,33 @@ public:
     return name != nullptr && std::string{*name} == impl_->scheme();
   }
 
+  // TODO: Fix compare! If members are equal ==> It is the same!
+  intptr_t compare(const uri& other) const noexcept {
+    return impl_.compare(other.impl_);
+  }
+
+  /// @private
+  template <class Processor>
+  friend void serialize(Processor& proc, uri& x) {
+    proc & *x.impl_;
+  }
+
 private:
   intrusive_ptr<impl> impl_;
 };
 
-
 } // namespace replication
 } // namespace caf
+
+namespace std {
+
+template <>
+struct hash<caf::replication::uri> {
+  inline size_t operator()(const caf::replication::uri& u) const {
+    return hash<std::string>()(u.to_string());
+  }
+};
+
+} // namespace std
 
 #endif // CAF_REPLICATION_URI_HPP

@@ -18,53 +18,41 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_INTERFACES_HPP
-#define CAF_REPLICATION_INTERFACES_HPP
+#ifndef CAF_REPLICATION_DETAIL_REGISTER_TYPES_HPP
+#define CAF_REPLICATION_DETAIL_REGISTER_TYPES_HPP
 
-#include "caf/typed_actor.hpp"
+#include "caf/actor_system_config.hpp"
 
-#include "caf/replication/atom_types.hpp"
+#include "caf/replication/crdt/all.hpp"
+
+#include "caf/replication/detail/replica.hpp"
 
 namespace caf {
 namespace replication {
+namespace detail {
 
-/// Interface definition for actors which work with CRDT States and support
-/// notifications.
-template <class State>
-using notifyable = typed_actor<
-  reacts_to<initial_atom, State>,
-  reacts_to<notify_atom, typename State::transaction_t>
->;
+struct register_types {
 
-/// For composables with a tick handler
-using tick_t = typed_actor<
-  reacts_to<tick_atom>
->;
+  register_types(actor_system_config& cfg) : cfg_(cfg) {
+    // nop
+  }
 
-/// Interface definition for actors which support publish
-template <class State>
-using publishable = typename typed_actor<
-  reacts_to<publish_atom, typename State::transaction_t>
->::template extend_with<tick_t>;
+  void operator()() noexcept {
+    cfg_.add_message_type<crdt::base_datatype>("base_datatype");
+    cfg_.add_message_type<uri>("uri");
+    cfg_.add_message_type<std::unordered_set<uri>>("unordered_set<uri>");
+    cfg_.add_message_type<crdt::gmap<node_id, std::pair<size_t, std::unordered_set<uri>>>>("gmap_distlayer");
+    // TODO: Base klasse benötigt?
+    // Datentypen wie z.B. gset<node_id> registrieren
+    //                     gset<actor_addr>, gset<actor>,...
+  }
 
-/// Interface definition for actors which support subscribe/unsubscribe
-template <class State>
-using subscribable_t = typed_actor<
-  typename replies_to<
-    subscribe_atom,
-    notifyable<State>
-  >::template with<initial_atom, State>,
-  reacts_to<unsubscribe_atom, notifyable<State>>,
-  reacts_to<set_parent_atom, publishable<State>>,
-  reacts_to<add_child_atom, publishable<State>>
->;
+private:
+  actor_system_config& cfg_;
+};
 
-/// Interface for actors, which support translation between CmRDT and
-/// CvRDTs
-template <class State>
-using translator_t = typename typed_actor<reacts_to<message>>::template extend_with<publishable<State>>;
-
+} // namespace detail
 } // namespace replication
 } // namespace caf
 
-#endif // CAF_REPLICATION_INTERFACES_HPP
+#endif // CAF_REPLICATION_DETAIL_REGISTER_TYPES_HPP

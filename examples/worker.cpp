@@ -28,21 +28,35 @@
 #include "caf/io/all.hpp"
 #include "caf/replication/all.hpp"
 
+#include "caf/replication/detail/distribution_layer.hpp"
+
+#include "caf/replication/lamport_clock.hpp"
+
 using namespace std;
 using namespace caf;
 using namespace caf::replication;
 
+namespace std {
+
+template <>
+bool operator< (const std::pair<int, std::unordered_set<caf::replication::uri>>& lhs,
+                const std::pair<int, std::unordered_set<caf::replication::uri>>& rhs) {
+    return lhs.first < rhs.first;
+};
+
+} // namespace std
+
 /// Example worker, supports the `notifyabe_type<>` interface, to fetch data
 /// from local top level replica.
 template <class State>
-class worker : public notifyable<State>::base {
+class worker : public State::base {
 public:
   worker(actor_config& cfg, std::string some_str)
-      : notifyable<State>::base(cfg), id_string_(std::move(some_str)) {
+      : State::base(cfg), id_string_(std::move(some_str)) {
     // nop
   }
 
-  typename notifyable<State>::behavior_type make_behavior() override {
+  typename State::behavior_type make_behavior() override {
     return {
       [&](initial_atom, State& state) {
         aout(this) << id_string_ << ": init" << endl;
@@ -115,6 +129,7 @@ private:
   std::vector<std::tuple<std::string, std::string, duration_t, duration_t> root_args;
 };*/
 
+
 int main(int argc, char* argv[]) {
   auto flush_interval  = std::chrono::seconds(1);
   auto resync_interval = std::chrono::seconds(10);
@@ -136,8 +151,10 @@ int main(int argc, char* argv[]) {
                                        resync_interval)
          .load<io::middleman>()
          .load<replication::replicator>()};*/
-  actor_system system{actor_system_config{}.load<io::middleman>()
-                                           .load<replication::replicator>()};
+  replicator_config cfg{};
+  cfg.load<io::middleman>().load<replication::replicator>();
+  cfg.add_replica_type<crdt::gset<int>>("gset<int>");
+  actor_system system{cfg};
   // --- Spawn some workers
   // Spawn a new tree:
   //       root
@@ -149,18 +166,16 @@ int main(int argc, char* argv[]) {
   auto worker2 = system.spawn<worker<crdt::gset<int>>>("worker2");
   auto worker3 = system.spawn<worker<crdt::gset<int>>>("worker3");
 
-  auto& repl = system.replicator();
-  repl.subscribe<crdt::gset<int>>("/rand", "/sub2", worker1);
-  repl.subscribe<crdt::gset<int>>("/rand", "/sub1/subsub1", worker2);
-  repl.subscribe<crdt::gset<int>>("/rand", "/sub1", worker3);
+  uri u{"gset<int>://rand"};
 
-  crdt::gmap<std::string, int> bleh;
-  bleh.assign("hallo", 4);
-  bleh.assign("hallo", 3);
-  bleh.assign("hallo", 56);
-  bleh.assign("z", -2);
-  std::cout << bleh.at("z") << std::endl;
-  std::cout << bleh.at("hallo") << std::endl;
+  auto& repl = system.replicator();
+  repl.subscribe<crdt::gset<int>>(u, /*"/sub2",*/ worker1);
+  repl.subscribe<crdt::gset<int>>(u, /*"/sub1/subsub1",*/ worker2);
+  repl.subscribe<crdt::gset<int>>(u, /*"/sub1",*/ worker3);
+
+  crdt::gmap<node_id, std::pair<int, std::unordered_set<uri>>> some_map;
+  some_map.assign(node_id{}, make_pair(12, std::unordered_set<uri>{}));
+  some_map.assign(node_id{}, make_pair(11, std::unordered_set<uri>{}));
 
 /*
   // gset<int>://videos/<ids>

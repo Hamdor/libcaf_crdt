@@ -21,23 +21,56 @@
 #ifndef CAF_REPLICATION_REPLICATOR_ACTOR_HPP
 #define CAF_REPLICATION_REPLICATOR_ACTOR_HPP
 
-#include <string>
-
 #include "caf/fwd.hpp"
+#include "caf/node_id.hpp"
+
 #include "caf/typed_actor.hpp"
 
+#include "caf/replication/uri.hpp"
 #include "caf/replication/atom_types.hpp"
+
+#include <unordered_set>
 
 namespace caf {
 namespace replication {
 
+// Forward declaration
+
+namespace crdt {
+
+template <class Key, class Value> struct gmap;
+
+} // namespace crdt
+
 /// Interface of replicator
 using replicator_actor = typed_actor<
-  reacts_to<std::string, message>,
+  /// Topic message pair, where the message contains updates for a topic
+  reacts_to<uri, message>,
+  /// Internal tick message to flush updates
   reacts_to<tick_atom>,
-  reacts_to<new_direct_con, node_id>,
-  reacts_to<new_indirect_con, node_id>,
-  reacts_to<con_lost, node_id>
+  /// A new connection to a CAF node (node_id) is established
+  reacts_to<new_connection_atom, node_id>,
+  /// A connection to a CAF node (node_id) is lost
+  reacts_to<connection_lost_atom, node_id>,
+  /// Return a unordered set of uris to sender
+  replies_to<get_topics_atom>::with<std::unordered_set<uri>>,
+
+
+  /// Adds a topic to senders map
+  reacts_to<add_topic_atom, uri>,
+  /// Removes a topic from senders map
+  reacts_to<remove_topic_atom, uri>,
+
+
+  ///
+  reacts_to<update_topics_atom,
+            crdt::gmap<node_id, std::pair<size_t, std::unordered_set<uri>>>>,
+
+
+  /// Subscribes a actor to a replica topic
+  reacts_to<subscribe_atom, uri>,
+  /// Unsubscribes a actor from a replica topic
+  reacts_to<unsubscribe_atom, uri>
 >;
 
 ///@relates replicator_actor

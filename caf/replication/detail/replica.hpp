@@ -1,0 +1,113 @@
+/******************************************************************************
+ *                       ____    _    _____                                   *
+ *                      / ___|  / \  |  ___|    C++                           *
+ *                     | |     / _ \ | |_       Actor                         *
+ *                     | |___ / ___ \|  _|      Framework                     *
+ *                      \____/_/   \_|_|                                      *
+ *                                                                            *
+ * Copyright (C) 2011 - 2016                                                  *
+ * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
+ * Marian Triebe <marian.triebe (at) haw-hamburg.de>                          *
+ *                                                                            *
+ * Distributed under the terms and conditions of the BSD 3-Clause License or  *
+ * (at your option) under the terms and conditions of the Boost Software      *
+ * License 1.0. See accompanying files LICENSE and LICENSE_ALTERNATIVE.       *
+ *                                                                            *
+ * If you did not receive a copy of the license files, see                    *
+ * http://opensource.org/licenses/BSD-3-Clause and                            *
+ * http://www.boost.org/LICENSE_1_0.txt.                                      *
+ ******************************************************************************/
+
+#ifndef CAF_REPLICATION_DETAIL_REPLICA_HPP
+#define CAF_REPLICATION_DETAIL_REPLICA_HPP
+
+#include "caf/event_based_actor.hpp"
+
+#include "caf/replication/uri.hpp"
+#include "caf/replication/atom_types.hpp"
+#include "caf/replication/notifyable.hpp"
+#include "caf/replication/replicator_actor.hpp"
+
+#include <unordered_set>
+
+namespace caf {
+namespace replication {
+namespace detail {
+
+///
+template <class T>
+class replica : public event_based_actor {
+public:
+  replica(actor_config& cfg, const uri& topic)
+      : event_based_actor(cfg), topic_{std::move(topic)} {
+    // nop
+  }
+
+  virtual void on_exit() override {
+    std::cout << "replica::exit..." << std::endl;
+    event_based_actor::on_exit();
+  }
+
+protected:
+  behavior make_behavior() override {
+    this->send(this, tick_atom::value);
+    return {
+      [&](publish_atom, message& msg) {
+        typename T::internal_t delta;
+        auto unpack = [&](typename T::internal_t& unpacked) {
+          delta = std::move(unpacked);
+        };
+        msg.apply(unpack);
+        if (delta.empty())
+          return;
+        delta = cvrdt_.merge(delta);
+        if (delta.empty())
+          return;
+        auto ops = delta.get_cmrdt_transactions(topic_.to_string());
+        for (auto& subs : subscribers_)
+          this->send(subs, notify_atom::value, ops);
+      },
+      [&](publish_atom, const typename T::transaction_t& transaction) {
+        auto delta = cvrdt_.apply(transaction);
+        if (delta.empty())
+          return;
+        buffer_.merge(delta);
+        for (auto& sub : subscribers_)
+          if (sub != this->current_sender())
+            this->send(sub, notify_atom::value, transaction);
+      },
+      [&](subscribe_atom, const actor& subscriber) {
+        subscribers_.emplace(subscriber);
+        T state;
+        state.apply(cvrdt_.get_cmrdt_transactions(topic_.to_string()));
+        state.set_owner(subscriber);
+        state.set_parent(this);
+        state.set_topic(topic_.to_string());
+        this->send(subscriber, initial_atom::value, std::move(state));
+      },
+      [&](unsubscribe_atom, const actor& subscriber) {
+        subscribers_.erase(subscriber);
+      },
+      [&](tick_atom) {
+        if (!buffer_.empty()) {
+          this->send(this->home_system().replicator().actor_handle(), topic_,
+                     make_message(buffer_));
+          buffer_.clear();
+        }
+        this->delayed_send(this, std::chrono::seconds(1), tick_atom::value);
+      }
+    };
+  }
+
+private:
+  uri topic_;
+  typename T::internal_t cvrdt_;    /// CvRDT state
+  typename T::internal_t buffer_;   /// Delta buffer
+  std::unordered_set<actor> subscribers_;
+};
+
+} // namespace detail
+} // namespace replication
+} // namespace caf
+
+#endif // CAF_REPLICATION_DETAIL_REPLICA_HPP

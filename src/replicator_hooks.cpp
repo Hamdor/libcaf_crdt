@@ -32,23 +32,19 @@ replicator_hooks::replicator_hooks(actor_system& sys)
 }
 
 void replicator_hooks::new_connection_established_cb(const node_id& node) {
-  auto hdl = sys_.replicator().actor_handle();
-  if (!hdl.unsafe())
-    self_->send(hdl, new_direct_con::value, node);
+  new_connection(node);
 }
 
 void replicator_hooks::new_route_added_cb(const node_id&, const node_id& node) {
-  auto hdl = sys_.replicator().actor_handle();
-  if (!hdl.unsafe())
-    self_->send(hdl, new_indirect_con::value, node);
+  new_connection(node);
 }
 
 void replicator_hooks::connection_lost_cb(const node_id& dest) {
   auto hdl = sys_.replicator().actor_handle();
-  if (!hdl.unsafe())
-    self_->send(hdl, con_lost::value, dest);
+  self_->send(hdl, connection_lost_atom::value, dest);
 }
 
-void replicator_hooks::before_shutdown_cb() {
-  // TODO?
+void replicator_hooks::new_connection(const node_id& node) {
+  auto hdl = sys_.replicator().actor_handle();
+  self_->send(hdl, new_connection_atom::value, node);
 }

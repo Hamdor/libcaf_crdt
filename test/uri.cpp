@@ -24,7 +24,6 @@
 #include "caf/all.hpp"
 
 #include "caf/replication/uri.hpp"
-#include "caf/replication/topic.hpp"
 
 using namespace caf;
 using namespace caf::replication;
@@ -52,19 +51,4 @@ CAF_TEST(uri_rrti) {
   cfg.add_message_type<a>("a");
   actor_system system{cfg};
   CAF_CHECK(uri{"a://"}.match_rtti<a>(system));
-}
-
-CAF_TEST(topic) {
-  struct a {};
-  auto cfg = actor_system_config{};
-  cfg.add_message_type<a>("a");
-  actor_system system{cfg};
-  // ---- Test topics
-  topic<a> t(system, "/rand");
-  //    ^             ^
-  //    +-- Type      +--- Path
-  CAF_CHECK(t.get_uri().to_string() == "a://rand");
-  // --
-  topic<a> t2(system, "/");
-  CAF_CHECK(t2.get_uri().to_string() == "a://");
 }

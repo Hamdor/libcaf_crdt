@@ -106,6 +106,14 @@ public:
   inline bool valid() const { return !path_.empty() && !scheme_.empty(); }
 
 private:
+
+  /// @private
+  template <class Processor>
+  friend void serialize(Processor& proc, uri_impl& x) {
+    proc & x.path_;
+    proc & x.scheme_;
+  }
+
   std::string path_;
   std::string scheme_;
 };

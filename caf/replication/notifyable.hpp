@@ -18,57 +18,25 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_DETAIL_COMPOSABLES_PUBLISHER_HPP
-#define CAF_REPLICATION_DETAIL_COMPOSABLES_PUBLISHER_HPP
+#ifndef CAF_REPLICATION_INTERFACES_HPP
+#define CAF_REPLICATION_INTERFACES_HPP
 
-#include "caf/composed_behavior.hpp"
-#include "caf/composable_behavior.hpp"
-#include "caf/composable_behavior_based_actor.hpp"
+#include "caf/typed_actor.hpp"
 
-#include "caf/replication/interfaces.hpp"
-
-#include "caf/replication/detail/composables/shared_state.hpp"
+#include "caf/replication/atom_types.hpp"
 
 namespace caf {
 namespace replication {
-namespace detail {
 
-///
-template <class T>
-class publisher : public composable_behavior<publishable<T>>,
-                  public virtual base_state<T>,
-                  public virtual cmrdt_buffer<T> {
-  using transaction_t = param_t<typename T::transaction_t>;
+/// Interface definition for actors which work with CRDT States and support
+/// notifications.
+template <class State>
+using notifyable = typed_actor<
+  reacts_to<initial_atom, State>,
+  reacts_to<notify_atom, typename State::transaction_t>
+>;
 
-public:
-
-  result<void> operator()(publish_atom, transaction_t transaction) override {
-    const auto& t = transaction.get();
-    // Apply to our state
-    this->apply(t);
-    // Send to tree childs
-    auto& sender = this->self->current_sender();
-    if (sender != this->parent())
-      this->put_buffer(t);
-    // Send to our tree childs
-    this->tree_publish(this, sender, publish_atom::value, t);
-    // Send to subscribers
-    this->publish(this, sender, notify_atom::value, t);
-    return unit;
-  }
-
-  /// Send update buffer to our parent
-  result<void> operator()(tick_atom) override {
-    this->flush_cmrdt_buffer_to(this, this->parent(), publish_atom::value);
-    // TODO: Make configurable
-    this->self->delayed_send(this->self, std::chrono::seconds(1),
-                             tick_atom::value);
-    return unit;
-  }
-};
-
-} // namespace detail
 } // namespace replication
 } // namespace caf
 
-#endif // CAF_REPLICATION_DETAIL_COMPOSABLES_PUBLISHER_HPP
+#endif // CAF_REPLICATION_INTERFACES_HPP

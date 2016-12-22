@@ -39,14 +39,11 @@ struct base_transaction {
   /// Time point, provided by clock
   using time_point = std::chrono::time_point<clock>;
 
-  base_transaction() : creator_{unsafe_actor_handle_init},
-                       time_{}, topic_{} {
-    // nop
-  }
+  base_transaction() = default;
 
   /// @param topic for this transaction
   /// @param creator the actor which created this transaction
-  base_transaction(std::string topic, actor creator)
+  base_transaction(std::string topic, actor creator = {})
       : creator_{std::move(creator)}, time_{clock::now()},
         topic_{std::move(topic)} {
     // nop
@@ -60,6 +57,10 @@ struct base_transaction {
 
   /// @returns the timestamp for this operations
   inline const time_point& time() const { return time_; }
+
+  inline void set_topic(const std::string& topic) {
+    topic_ = topic;
+  }
 
   /// @returns a string representing either the nanoseconds since epoch,
   /// or the ns since last boot.
@@ -75,13 +76,6 @@ struct base_transaction {
   /// @returns `true`, override this function if your type supports
   /// a `empty()` implementation.
   virtual bool empty() const { return false; }
-
-  template <class Processor>
-  friend void serialize(Processor& proc, base_transaction& x) {
-    proc & x.creator_;
-    proc & x.time_;
-    proc & x.topic_;
-  }
 
 private:
   actor creator_;     /// Actor which created this transaction

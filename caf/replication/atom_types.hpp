@@ -34,31 +34,37 @@ using notify_atom = atom_constant<atom("notify")>;
 
 // -------- Internal atoms -----------------------------------------------------
 
-/// Atom used to register the replicator
+/// @private
 using replicator_atom = atom_constant<atom("replicator")>;
-
-/// @private
-using set_parent_atom = atom_constant<atom("setparent")>;
-
-/// @private
-using add_child_atom = atom_constant<atom("addchild")>;
 
 /// @private
 using tick_atom = atom_constant<atom("tick")>;
 
+/// @private
+using shutdown_atom = atom_constant<atom("shutdown")>;
+
 // -------- Replicator communication atoms -------------------------------------
 
 /// @private
-using new_direct_con = atom_constant<atom("directnode")>;
+using new_connection_atom = atom_constant<atom("newcon")>;
 
 /// @private
-using new_indirect_con = atom_constant<atom("indirectno")>;
+using connection_lost_atom = atom_constant<atom("conlost")>;
 
 /// @private
-using con_lost = atom_constant<atom("conlost")>;
+using get_topics_atom = atom_constant<atom("gettopics")>;
 
 /// @private
-// TODO: Shutdown atom?
+using add_topic_atom = atom_constant<atom("addtopic")>;
+
+/// @private
+using remove_topic_atom = atom_constant<atom("remtopic")>;
+
+/// @private
+using update_topics_atom = atom_constant<atom("updatetopi")>;
+
+/// @private
+using create_replica_atom = atom_constant<atom("makerepl")>;
 
 } // namespace replication
 } // namespace caf

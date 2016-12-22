@@ -18,36 +18,12 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/all.hpp"
+#ifndef CAF_REPLICATION_CRDT_ALL_HPP
+#define CAF_REPLICATION_CRDT_ALL_HPP
 
-#include "caf/replication/detail/composables/translator.hpp"
-#include "caf/replication/detail/composables/subscribable.hpp"
-#include "caf/replication/detail/composables/publisher.hpp"
-
-#include "caf/replication/detail/replica_actor.hpp"
-
+#include "caf/replication/crdt/gmap.hpp"
 #include "caf/replication/crdt/gset.hpp"
 #include "caf/replication/crdt/gcounter.hpp"
+#include "caf/replication/crdt/lww_register.hpp"
 
-using namespace caf;
-using namespace replication;
-using namespace replication::detail;
-
-int main() {
-  auto cfg = actor_system_config{};
-  actor_system system{cfg};
-  // ------
-  system.spawn<composed_behavior<subscribable<crdt::gcounter<int>>>>();
-  system.spawn<composed_behavior<translator<crdt::gcounter<int>>>>();
-  system.spawn<composed_behavior<publisher<crdt::gcounter<int>>>>();
-  // ------
-  system.spawn<composed_behavior<subscribable<crdt::gset<int>>>>();
-  system.spawn<composed_behavior<translator<crdt::gset<int>>>>();
-  system.spawn<composed_behavior<publisher<crdt::gset<int>>>>();
-  // -------
-  system.spawn<root_replica_actor<crdt::gset<int>>>();
-  system.spawn<replica_actor<crdt::gset<int>>>();
-  // -------
-  system.spawn<root_replica_actor<crdt::gcounter<int>>>();
-  system.spawn<replica_actor<crdt::gcounter<int>>>();
-}
+#endif // CAF_REPLICATION_CRDT_ALL_HPP

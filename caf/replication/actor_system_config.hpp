@@ -7,7 +7,7 @@
  *                                                                            *
  * Copyright (C) 2011 - 2016                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
- * Marian Triebe <marian.triebe (at) haw-hamburg.de>                          *
+ * Marian Triebe <marian.triebe (at) haw-hamburg.de>
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -18,38 +18,31 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_TOPIC_HPP
-#define CAF_REPLICATION_TOPIC_HPP
+#ifndef CAF_REPLICATION_ACTOR_SYSTEM_CONFIG_HPP
+#define CAF_REPLICATION_ACTOR_SYSTEM_CONFIG_HPP
 
-#include "caf/replication/uri.hpp"
+#include "caf/actor_system_config.hpp"
+
+#include "caf/replication/detail/replica.hpp"
 
 namespace caf {
 namespace replication {
 
-/// A topic is defined by a scheme (type) and a path, it contains
-/// a underlying uri.
-template <class T>
-struct topic {
-  /// Underlying type of topic
-  using scheme_type = T;
+/// Extended `actor_system_config` to support the replication module.
+struct replicator_config : public virtual caf::actor_system_config {
 
-  /// Creates a new topic
-  /// @param system the actor system which knows type T
-  /// @param what valid path
-  topic(const actor_system& system, const std::string& what)
-      : uri_(static_cast<T*>(nullptr), system, what) {
-    // nop
+  /// Adds replica `Type` to the replicator (if loaded).
+  template <class Type>
+  actor_system_config& add_replica_type(const std::string& name) {
+    add_message_type<Type>(name);
+    add_message_type<typename Type::internal_t>(name+"::internal");
+    add_actor_type<replication::detail::replica<Type>,
+                   const std::string&>(name);
+    return *this;
   }
-
-  /// Get the underlying uri
-  const uri& get_uri() const { return uri_; }
-
-private:
-  uri uri_; /// Underlying URI
 };
 
 } // namespace replication
 } // namespace caf
 
-
-#endif // CAF_REPLICATION_TOPIC_HPP
+#endif // CAF_REPLICATION_ACTOR_SYSTEM_CONFIG_HPP

@@ -23,13 +23,13 @@
 #include "caf/replication/all.hpp"
 
 #include "caf/replication/uri.hpp"
-#include "caf/replication/topic.hpp"
 
 #include <set>
 #include <iostream>
 
 using namespace caf;
 using namespace caf::replication;
+using namespace caf::replication::crdt;
 
 struct some_crap {};
 
@@ -56,10 +56,6 @@ int main() {
   cfg.add_message_type<crdt::gset<int>>("gset<int>");
   actor_system system{cfg};
   // ----
-  std::cout << topic<crdt::gset<int>>(system, "/rand").get_uri().to_string()
-            << std::endl;
-  std::cout << topic<some_crap>(system, "/rand").get_uri().to_string()
-            << std::endl;
   auto u = uri{"gset<int>://rand"};
   std::cout << std::boolalpha << "assumed (true, false): "
             << u.match_rtti<crdt::gset<int>>(system) << ", "

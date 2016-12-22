@@ -26,11 +26,11 @@
 
 #include "caf/io/middleman.hpp"
 
-#include "caf/replication/detail/replica_map.hpp"
+#include "caf/replication/detail/distribution_layer.hpp"
 
-#include <map>
 #include <tuple>
 #include <vector>
+#include <unordered_map>
 
 namespace caf {
 namespace replication {
@@ -40,11 +40,16 @@ namespace {
 /// Implementation of replicator actor
 struct replicator_actor_impl : public replicator_actor::base {
 
-  replicator_actor_impl(actor_config& cfg) : replicator_actor::base(cfg) {
+  replicator_actor_impl(actor_config& cfg)
+      : replicator_actor::base(cfg), dist(this) {
     // nop
   }
 
-  virtual ~replicator_actor_impl() = default;
+  virtual ~replicator_actor_impl() {
+    for (auto& r : replicas_)
+      anon_send_exit(r.second, exit_reason::user_shutdown);
+    replicas_.clear();
+  }
 
   const char* name() const override {
     return "replicator_actor";
@@ -54,38 +59,73 @@ protected:
   behavior_type make_behavior() override {
     send(this, tick_atom::value);
     return {
-      [&](const std::string& topic, message& msg) {
-        updates_.emplace_back(std::make_tuple(topic, std::move(msg)));
+      [&](const uri& topic, message& msg) {
+        if(current_sender()->node() == this->node())
+          updates_.emplace_back(std::make_tuple(topic, std::move(msg)));
+        else {
+          auto iter = replicas_.find(topic);
+          if (iter != replicas_.end())
+            anon_send(iter->second, publish_atom::value, std::move(msg));
+        }
       },
       [&](tick_atom) {
         for(auto& update : updates_) {
           auto& topic = std::get<0>(update);
           auto& payload = std::get<1>(update);
-          for (auto& nid : topic_users_.lookup(topic)) {
-            auto& repl = replicator_map_[nid];
-            anon_send(repl, topic, payload); // TODO: Remove anon_send
-          }
+          dist.publish(topic, payload);
         }
         updates_.clear();
         delayed_send(this, std::chrono::milliseconds(250), tick_atom::value);
       },
-      [&](new_direct_con, const node_id&) {
-        // TODO: Get topics and add to list
+      [&](new_connection_atom, const node_id& node) {
+        dist.add_new_node(node);
       },
-      [&](new_indirect_con, const node_id&) {
-        // TODO: Get topics and add to list
+      [&](connection_lost_atom, const node_id& nid) {
+        dist.remove_node(nid);
       },
-      [&](con_lost, const node_id& nid) {
-        // Remove node id from our base
-        topic_users_.remove_node(nid);
+      [&](get_topics_atom) {
+        return dist.topics_of(node());
+      },
+      [&](add_topic_atom, const uri& topic) {
+        dist.add_topic(current_sender()->node(), topic);
+      },
+      [&](remove_topic_atom, const uri& topic) {
+        dist.remove_topic(current_sender()->node(), topic);
+      },
+      [&](update_topics_atom, detail::distribution_layer::payload_type& p) {
+        dist.update_topics(std::move(p));
+      },
+      [&](subscribe_atom, const uri& u) {
+        auto iter = replicas_.find(u);
+        if (iter == replicas_.end()) {
+          auto opt = system().spawn<actor>(u.scheme(),
+                                           make_message(u.to_string()));
+          if (opt) {
+            iter = replicas_.emplace(u, *opt).first;
+            dist.add_topic(node(), u);
+          } else
+            return; // TODO: Handle error -> error<...>
+        }
+        anon_send(iter->second, subscribe_atom::value,
+                  actor_cast<actor>(current_sender()));
+      },
+      [&](unsubscribe_atom, const uri& u) {
+        auto iter = replicas_.find(u);
+        if (iter == replicas_.end())
+          return;
+        anon_send(iter->second, unsubscribe_atom::value,
+                  actor_cast<actor>(current_sender()));
       }
     };
   }
 
 private:
-  std::vector<std::tuple<std::string, message>> updates_; // Update buffer
-  std::map<node_id, actor> replicator_map_; // Map node_ids to replicators
-  detail::replica_map topic_users_; // Map topics to subsribers
+  /// Update buffer
+  std::vector<std::tuple<uri, message>> updates_;
+  /// Map of local replicas
+  std::unordered_map<uri, actor> replicas_;
+  /// Organize distribution of updates
+  detail::distribution_layer dist;
 };
 
 } // namespace <anonymous>

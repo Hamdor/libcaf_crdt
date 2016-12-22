@@ -43,10 +43,10 @@ public:
   /// Called whenever a direct connection was lost.
   void connection_lost_cb(const node_id& dest) override;
 
-  /// Called before middleman shuts down.
-  void before_shutdown_cb() override;
-
 private:
+
+  void new_connection(const node_id& node);
+
   scoped_actor self_;
   actor_system& sys_;
 };

@@ -22,14 +22,11 @@
 #define CAF_REPLICATION_ALL_HPP
 
 #include "caf/replication/uri.hpp"
-#include "caf/replication/topic.hpp"
 #include "caf/replication/atom_types.hpp"
-#include "caf/replication/interfaces.hpp"
+#include "caf/replication/notifyable.hpp"
 #include "caf/replication/replicator.hpp"
+#include "caf/replication/actor_system_config.hpp"
 
-#include "caf/replication/crdt/gmap.hpp"
-#include "caf/replication/crdt/gset.hpp"
-#include "caf/replication/crdt/gcounter.hpp"
-#include "caf/replication/crdt/lww_register.hpp"
+#include "caf/replication/crdt/all.hpp"
 
 #endif // CAF_REPLICATION_ALL_HPP

@@ -37,7 +37,7 @@ namespace caf {
 namespace replication {
 namespace crdt {
 
-namespace {
+//namespace {
 
 /// A gset support the following mutable operations
 enum class gset_operations {
@@ -51,6 +51,15 @@ struct gset_transaction : public base_transaction {
   using operation_t = gset_operations;
 
   /// Construct a new transaction
+  gset_transaction(std::string topic, operation_t operation,
+                   std::set<T> values)
+    : base_transaction(std::move(topic)),
+      op_(std::move(operation)),
+      values_(std::move(values)) {
+    // nop
+  }
+
+  /// Construct a new transaction
   gset_transaction(std::string topic, actor owner, operation_t operation,
                    std::set<T> values)
     : base_transaction(std::move(topic), std::move(owner)),
@@ -59,18 +68,24 @@ struct gset_transaction : public base_transaction {
     // nop
   }
 
-  virtual ~gset_transaction() = default;
-
   /// Returns the operation of this transaction
   inline const operation_t& operation() const { return op_; }
 
   /// Returns the value of this transaction
   inline const std::set<T>& values() const { return values_; }
 
+  /// @private
   template <class Processor>
   friend void serialize(Processor& proc, gset_transaction<T>& x) {
     proc & x.op_;
     proc & x.values_;
+  }
+
+  friend std::string to_string(const gset_transaction<T>& e) {
+    std::stringstream ss;
+    ss << e.values_.size();
+    ss << (e.op_ == operation_t::insertion ? "insert" : "none");
+    return ss.str();
   }
 
 private:
@@ -91,7 +106,7 @@ struct gset_impl {
   /// Default constructor
   gset_impl() = default;
 
-  gset_impl(std::set<T> set) : set_(std::move(set)) {
+  gset_impl(std::set<T> delta) : set_(std::move(delta)) {
     // nop
   }
 
@@ -111,7 +126,7 @@ struct gset_impl {
   /// Merge function, for this type it is simple
   /// @param other delta-CRDT to merge into this
   /// @returns a delta gset<T>
-  gset_impl<T> merge(const std::string&, const gset_impl<T>& other) {
+  gset_impl<T> merge(const gset_impl<T>& other) {
     std::set<T> delta;
     for (auto& elem : other.set_)
       if (internal_emplace(elem))
@@ -120,12 +135,9 @@ struct gset_impl {
   }
 
   /// This is used to convert this delta-CRDT to CmRDT transactions
-  /// @param topic for this transaction
-  /// @param creator these transactions where done
-  transaction_t get_cmrdt_transactions(const std::string& topic,
-                                       const actor& creator) const {
+  transaction_t get_cmrdt_transactions(const std::string& topic) const {
     // For this type its simple again, we just have to copy the set
-    return {topic, creator, operator_t::insertion, set_};
+    return {topic, operator_t::insertion, set_};
   }
 
   /// @returns `true` if the state is empty
@@ -157,9 +169,15 @@ namespace cmrdt {
 template <class T>
 class gset_impl : public base_datatype {
 public:
+
   using operator_t = gset_operations;
   /// Mutable operations will trigger this type
   using transaction_t = gset_transaction<T>;
+
+  gset_impl(actor owner, actor parent, std::string topic)
+    : base_datatype(std::move(owner), std::move(parent), std::move(topic)) {
+    // nop
+  }
 
   gset_impl() = default;
 
@@ -250,23 +268,25 @@ private:
 
 } // namespace cmrdt
 
-} // namespace <anonymous>
+//} // namespace <anonymous>
 
 /// Implementation of a grow-only set (GSet)
 template <class T>
 struct gset : public cmrdt::gset_impl<T>,
               public caf::detail::comparable<gset<T>> {
+  using value_type = T;
+  /// Internal type of gset
+  using internal_t = delta::gset_impl<T>;
+
+  using interface = notifyable<gset<T>>;
+  using base = typename notifyable<gset<T>>::base;
+  using behavior_type = typename notifyable<gset<T>>::behavior_type;
 
   gset() = default;
 
   gset(std::set<T> set) : cmrdt::gset_impl<T>(std::move(set)) {
     // nop
   }
-
-  /// Internal type of gset
-  using internal_t = delta::gset_impl<T>;
-  /// Internal used for hierarchical propagation
-  using transaction_t = typename cmrdt::gset_impl<T>::transaction_t;
 };
 
 } // namespace crdt

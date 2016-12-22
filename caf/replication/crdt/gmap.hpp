@@ -30,7 +30,7 @@ namespace caf {
 namespace replication {
 namespace crdt {
 
-namespace {
+//namespace {
 
 /// Operations supportet by GMap
 enum class gmap_operation {
@@ -43,7 +43,18 @@ template <class Key, class Value>
 struct gmap_transaction : public base_transaction {
   using operation_t = gmap_operation;
 
-  /// Construct a new transaction
+  gmap_transaction(std::string topic, operation_t op, Key key, Value value)
+      : base_transaction(std::move(topic)),
+        op_(std::move(op)) {
+    map_.emplace(std::move(key), std::move(value));
+  }
+
+  gmap_transaction(std::string topic, operation_t op, std::unordered_map<Key, Value> map)
+      : base_transaction(std::move(topic)),
+        op_(std::move(op)), map_(std::move(map)) {
+    // nop
+  }
+
   gmap_transaction(std::string topic, actor owner, operation_t op,
                    Key key, Value value)
       : base_transaction(std::move(topic), std::move(owner)),
@@ -52,19 +63,17 @@ struct gmap_transaction : public base_transaction {
   }
 
   gmap_transaction(std::string topic, actor owner, operation_t op,
-                   std::map<Key, Value> map)
+                   std::unordered_map<Key, Value> map)
       : base_transaction(std::move(topic), std::move(owner)),
         op_(std::move(op)), map_(std::move(map)) {
     // nop
   }
 
-  virtual ~gmap_transaction() = default;
-
   /// Returns the operations of this transaction
   inline const operation_t& operation() const { return op_; }
 
   /// Returns the value of this transaction
-  inline const std::map<Key, Value> map() const { return map_; }
+  inline const std::unordered_map<Key, Value> map() const { return map_; }
 
   template <class Processor>
   friend void serialize(Processor& proc, gmap_transaction<Key, Value>& x) {
@@ -72,9 +81,13 @@ struct gmap_transaction : public base_transaction {
     proc & x.map_;
   }
 
+  friend std::string to_string(const gmap_transaction&) {
+    return {}; // TODO: Implement me
+  }
+
 private:
   operation_t op_;
-  std::map<Key, Value> map_;
+  std::unordered_map<Key, Value> map_;
 };
 
 namespace delta {
@@ -90,7 +103,7 @@ struct gmap_impl {
   /// Default constructor
   gmap_impl() = default;
 
-  gmap_impl(std::map<Key, Value> map) : map_(std::move(map)) {
+  gmap_impl(std::unordered_map<Key, Value> map) : map_(std::move(map)) {
     // nop
   }
 
@@ -98,7 +111,7 @@ struct gmap_impl {
   /// @param history a transaction
   /// @return a delta-CRDT which represent the delta
   gmap_impl<Key, Value> apply(const transaction_t& history) {
-    std::map<Key, Value> delta;
+    std::unordered_map<Key, Value> delta;
     if (history.operation() == operator_t::assign) {
       for (auto& pair : history.map()) {
         auto& entry = map_[pair.first];
@@ -115,7 +128,7 @@ struct gmap_impl {
   /// the bigger value wins.
   gmap_impl<Key, Value> merge(const std::string&,
                               const gmap_impl<Key, Value>& other) {
-    std::map<Key, Value> delta;
+    std::unordered_map<Key, Value> delta;
     for (auto& elem : other.map_) {
       auto& key   = elem.first;
       auto& value = elem.second;
@@ -128,11 +141,8 @@ struct gmap_impl {
   }
 
   /// This is used to convert this delta-CRDT to CmRDT transactions
-  /// @param topic for this transaction
-  /// @param creator these transactions where done
-  transaction_t get_cmrdt_transactions(const std::string& topic,
-                                       const actor& creator) const {
-    return {topic, creator, operator_t::assign, map_};
+  transaction_t get_cmrdt_transactions(const std::string& topic) const {
+    return {topic, operator_t::assign, map_};
   }
 
   /// @returns `true` if the state is empty
@@ -143,7 +153,7 @@ struct gmap_impl {
   inline void clear() { map_.clear(); }
 
   /// Get reference to internal map
-  inline const std::map<Key, Value>& map() const { return map_; }
+  inline const std::unordered_map<Key, Value>& map() const { return map_; }
 
   /// @private
   template <class Processor>
@@ -152,7 +162,7 @@ struct gmap_impl {
   }
 
 private:
-  std::map<Key, Value> map_;
+  std::unordered_map<Key, Value> map_;
 };
 
 } // namespace delta
@@ -160,9 +170,11 @@ private:
 namespace cmrdt {
 
 /// Grow only map as CmRDT.
+// TODO: http://en.cppreference.com/w/cpp/container/unordered_map alles impln
 template <class Key, class Value>
 class gmap_impl : public base_datatype {
-  using iterator = typename std::map<Key, Value>::iterator;
+  using iterator = typename std::unordered_map<Key, Value>::iterator;
+  using const_iterator = typename std::unordered_map<Key, Value>::const_iterator;
 
 public:
   using key_type = Key;
@@ -175,7 +187,7 @@ public:
 
   /// Get the value of key
   const Value& at(const Key& key) {
-    return map_[key]; // TODO: Generate update?
+    return map_[key];
   }
 
   /// Assign a new value to key. If a key/value pair already exist,
@@ -192,7 +204,32 @@ public:
   }
 
   /// @returns a reference to internal map
-  inline const std::map<Key, Value> map() const { return map_; }
+  inline const std::unordered_map<Key, Value> map() const { return map_; }
+
+  //
+
+  inline Value& operator[](const Key& key) { return map_[key]; }
+
+  inline Value& operator[](Key&& key) { return map_[std::move(key)]; }
+
+  template <class... Ts>
+  std::pair<iterator, bool> emplace(Ts&&... args) {
+    return map_.emplace(std::forward<Ts>(args)...);
+  }
+
+  inline iterator begin() { return map_.begin(); }
+  inline const_iterator begin() const { return map_.begin(); }
+  inline const_iterator cbegin() const { return map_.cbegin(); }
+
+  inline iterator end() { return map_.end(); }
+  inline const_iterator end() const { return map_.end(); }
+  inline const_iterator cend() const { return map_.end(); }
+
+  ///
+  inline iterator find(const Key& key) { return map_.find(key); }
+
+  ///
+  inline const_iterator find(const Key& key) const { return map_.find(key); }
 
 private:
   void internal_assign(const Key& key, const Value& value) {
@@ -200,20 +237,20 @@ private:
     publish(transaction_t{topic(), owner(), operator_t::assign, key, value});
   }
 
-  std::map<Key, Value> map_;
+  std::unordered_map<Key, Value> map_;
 };
 
 } // namespace cmrdt
 
-} // namespace <anonymous>
+//} // namespace <anonymous>
 
 /// Implementation of a grow-only map (GMap)
 template <class Key, class Value>
 struct gmap : public cmrdt::gmap_impl<Key, Value> {
+  using key_type = Key;
+  using value_type = Value;
   /// Internal type of gmap
   using internal_t = delta::gmap_impl<Key, Value>;
-  /// Internal used for hierachical propagation
-  using transaction_t = typename cmrdt::gmap_impl<Key, Value>::transaction_t;
 };
 
 } // namespace crdt

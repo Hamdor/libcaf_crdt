@@ -27,30 +27,24 @@
 
 #include "caf/replication/atom_types.hpp"
 
+#include "caf/actor_ostream.hpp"
+
 namespace caf {
 namespace replication {
 namespace crdt {
 
 ///
-//template <class T>
 class base_datatype {
 public:
   /// Default constructor
-  base_datatype() : owner_(unsafe_actor_handle_init)
-                  , parent_(unsafe_actor_handle_init) {
+  base_datatype() = default;
+
+  ///
+  base_datatype(actor owner, actor parent, std::string topic)
+      : owner_(std::move(owner)), parent_(std::move(parent)),
+        topic_(std::move(topic)) {
     // nop
   }
-
-  /*T merge(message msg) {
-    T result;
-    msg.apply([&](const T& unpacked) {
-      result = std::move(this->merge(unpacked));
-    },
-    others >> [] {
-      // TODO: ERROR!
-    });
-    return result;
-  }*/
 
   /// @returns topic of this state
   inline const std::string& topic() const { return topic_; }
@@ -70,12 +64,20 @@ public:
   /// @private
   inline void set_topic(std::string topic) { topic_ = std::move(topic); }
 
+  /// @private
+  template <class Processor>
+  friend void serialize(Processor& proc, base_datatype& x) {
+    proc & x.owner_;
+    proc & x.parent_;
+    proc & x.topic_;
+  }
+
 protected:
+
   /// Propagate transaction to our parent
   template <class Data>
   void publish(const Data& data) const {
-    if (!parent_.unsafe())
-      send_as(owner_, parent_, publish_atom::value, data);
+    send_as(owner_, parent_, publish_atom::value, data);
   }
 
 private:
@@ -83,7 +85,6 @@ private:
   actor parent_; /// Parent of owning actor
   std::string topic_; /// Topic for this datatype
 };
-
 
 } // namespace crdt
 } // namespace replication

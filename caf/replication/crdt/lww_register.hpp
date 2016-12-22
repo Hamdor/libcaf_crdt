@@ -36,7 +36,7 @@ namespace caf {
 namespace replication {
 namespace crdt {
 
-namespace {
+//namespace {
 
 /// A LWW Reg support the following mutable operations
 enum class lww_reg_operations {
@@ -49,6 +49,16 @@ template <class T>
 struct lww_reg_transaction : public base_transaction {
   using operation_t = lww_reg_operations;
 
+  lww_reg_transaction(std::string topic, operation_t operation,
+                      lamport_clock clk, node_id setter, T value)
+    : base_transaction(std::move(topic)),
+      op_(std::move(operation)),
+      clk_(std::move(clk)),
+      setter_(std::move(setter)),
+      value_(std::move(value)) {
+    // nop
+  }
+
   /// Construct a new transaction
   lww_reg_transaction(std::string topic, actor owner, operation_t operation,
                       lamport_clock clk, node_id setter, T value)
@@ -59,8 +69,6 @@ struct lww_reg_transaction : public base_transaction {
       value_(std::move(value)) {
     // nop
   }
-
-  virtual ~lww_reg_transaction() = default;
 
   /// Returns the operation of this transaction
   inline const operation_t& operation() const { return op_; }
@@ -73,13 +81,6 @@ struct lww_reg_transaction : public base_transaction {
 
   /// Returns the setter of the value (origin node of value)
   inline const node_id& setter() const { return setter_; }
-
-  template <class Processor>
-  friend void serialize(Processor& proc, lww_reg_transaction<T>& x) {
-    proc & x.clk_;
-    proc & x.setter_;
-    proc & x.value_;
-  }
 
 private:
   operation_t op_;
@@ -125,7 +126,7 @@ struct lww_reg_impl {
   /// Merge function, for this type it is simple
   /// @param other delta-CRDT to merge into this
   /// @returns a delta gset<T>
-  lww_reg_impl<T> merge(const std::string&, const lww_reg_impl<T>& other) {
+  lww_reg_impl<T> merge(const lww_reg_impl<T>& other) {
     if (other.clk_ > clk_ || (other.clk_ == clk_ && other.setter_ > setter_)) {
       clk_ = other.clk_;
       setter_ = other.setter_;
@@ -138,9 +139,8 @@ struct lww_reg_impl {
   /// This is used to convert this delta-CRDT to CmRDT transactions
   /// @param topic for this transaction
   /// @param creator these transactions where done
-  transaction_t get_cmrdt_transactions(const std::string& topic,
-                                       const actor& creator) const {
-    return {topic, creator, operator_t::set, clk_, setter_, value_};
+  transaction_t get_cmrdt_transactions(const std::string& topic) const {
+    return {topic, operator_t::set, clk_, setter_, value_};
   }
 
   /// @returns `true` if the state is empty
@@ -223,7 +223,7 @@ private:
 
 } // namespace cmrdt
 
-} // namespace <anonymous>
+//} // namespace <anonymous>
 
 /// Implementation of a Last writer wins register (LWW-Reg)
 template <class T>
@@ -234,8 +234,6 @@ struct lww_reg : public cmrdt::lww_reg_impl<T>,
 
   /// Internal type of gset
   using internal_t = delta::lww_reg_impl<T>;
-  /// Internal used for hierarchical propagation
-  using transaction_t = typename cmrdt::lww_reg_impl<T>::transaction_t;
 };
 
 } // namespace crdt
