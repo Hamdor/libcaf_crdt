@@ -21,9 +21,9 @@
 #define CAF_SUITE lamport_clock
 #include "caf/test/unit_test.hpp"
 
-#include "caf/replication/lamport_clock.hpp"
+#include "caf/crdt/lamport_clock.hpp"
 
-using namespace caf::replication;
+using namespace caf::crdt;
 
 CAF_TEST(compare) {
   lamport_clock l1, l2;

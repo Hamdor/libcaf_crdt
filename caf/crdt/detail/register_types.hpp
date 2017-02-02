@@ -18,69 +18,41 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_REPLICATOR_HPP
-#define CAF_REPLICATION_REPLICATOR_HPP
+#ifndef CAF_CRDT_DETAIL_REGISTER_TYPES_HPP
+#define CAF_CRDT_DETAIL_REGISTER_TYPES_HPP
 
-#include "caf/config.hpp"
-#include "caf/actor_system.hpp"
+#include "caf/actor_system_config.hpp"
 
-#include "caf/replication/uri.hpp"
-#include "caf/replication/notifyable.hpp"
-#include "caf/replication/replicator_actor.hpp"
+#include "caf/crdt/types/all.hpp"
 
-#include "caf/replication/detail/replica.hpp"
+#include "caf/crdt/detail/replica.hpp"
 
 namespace caf {
-namespace replication {
+namespace crdt {
+namespace detail {
 
-///
-class replicator : public actor_system::module {
-public:
-  friend class actor_system;
-  replicator(const replicator&) = delete;
-  replicator& operator=(const replicator&) = delete;
+struct register_types {
 
-  void start() override;
-  void stop() override;
-  void init(actor_system_config&) override;
-
-  id_t id() const override;
-
-  void* subtype_ptr() override;
-
-  static actor_system::module* make(actor_system& sys,
-                                    caf::detail::type_list<>);
-
-  replicator_actor actor_handle();
-
-  inline actor_system& system() const {
-    return system_;
+  register_types(actor_system_config& cfg) : cfg_(cfg) {
+    // nop
   }
 
-protected:
-  replicator(actor_system&);
-  ~replicator();
+  void operator()() noexcept {
+    cfg_.add_message_type<types::base_datatype>("base_datatype");
+    cfg_.add_message_type<uri>("uri");
+    cfg_.add_message_type<std::unordered_set<uri>>("unordered_set<uri>");
+    cfg_.add_message_type<types::gmap<node_id, std::pair<size_t, std::unordered_set<uri>>>>("gmap_distlayer");
+    // TODO: Base klasse benötigt?
+    // Datentypen wie z.B. gset<node_id> registrieren
+    //                     gset<actor_addr>, gset<actor>,...
+  }
 
 private:
-  actor_system& system_;
-  replicator_actor manager_;
-
-public:
-
-  ///
-  template <class T>
-  void subscribe(const uri& u, const notifyable<T>& subscriber) {
-    send_as(subscriber, manager_, subscribe_atom::value, u);
-  }
-
-  ///
-  template <class T>
-  void unsubscribe(const uri& u, const notifyable<T>& subscriber) {
-    send_as(subscriber, manager_, unsubscribe_atom::value, u);
-  }
+  actor_system_config& cfg_;
 };
 
-} // namespace replication
+} // namespace detail
+} // namespace crdt
 } // namespace caf
 
-#endif // CAF_REPLICATION_REPLICATOR_HPP
+#endif // CAF_CRDT_DETAIL_REGISTER_TYPES_HPP

@@ -23,11 +23,11 @@
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
-#include "caf/replication/all.hpp"
+#include "caf/crdt/all.hpp"
 
 using namespace std;
 using namespace caf;
-using namespace caf::replication;
+using namespace caf::crdt;
 
 namespace {
 
@@ -80,17 +80,17 @@ private:
 CAF_TEST(test) {
   uri u{"gset<int>://rand"};
   auto cfg = replicator_config{};
-  cfg.load<io::middleman>().load<replication::replicator>();
-  cfg.add_replica_type<crdt::gset<int>>("gset<int>");
+  cfg.load<io::middleman>().load<crdt::replicator>();
+  cfg.add_replica_type<types::gset<int>>("gset<int>");
   actor_system system{cfg};
 
-  auto worker1 = system.spawn<worker<crdt::gset<int>>>("worker1");
-  auto worker2 = system.spawn<worker<crdt::gset<int>>>("worker2");
-  auto worker3 = system.spawn<worker<crdt::gset<int>>>("worker3");
+  auto worker1 = system.spawn<worker<types::gset<int>>>("worker1");
+  auto worker2 = system.spawn<worker<types::gset<int>>>("worker2");
+  auto worker3 = system.spawn<worker<types::gset<int>>>("worker3");
   // ...
   auto& repl = system.replicator();
-  repl.subscribe<crdt::gset<int>>(u, worker1);
-  repl.subscribe<crdt::gset<int>>(u, worker2);
-  repl.subscribe<crdt::gset<int>>(u, worker3);
+  repl.subscribe<types::gset<int>>(u, worker1);
+  repl.subscribe<types::gset<int>>(u, worker2);
+  repl.subscribe<types::gset<int>>(u, worker3);
   // TODO: Add collector and compare if all states are equiv...
 }

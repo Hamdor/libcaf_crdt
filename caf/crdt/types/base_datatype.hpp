@@ -18,20 +18,20 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_CRDT_BASE_DATATYPE_HPP
-#define CAF_REPLICATION_CRDT_BASE_DATATYPE_HPP
+#ifndef CAF_CRDT_TYPES_BASE_DATATYPE_HPP
+#define CAF_CRDT_TYPES_BASE_DATATYPE_HPP
 
 #include <string>
 
 #include "caf/message.hpp"
 
-#include "caf/replication/atom_types.hpp"
+#include "caf/crdt/atom_types.hpp"
 
 #include "caf/actor_ostream.hpp"
 
 namespace caf {
-namespace replication {
 namespace crdt {
+namespace types {
 
 ///
 class base_datatype {
@@ -86,8 +86,8 @@ private:
   std::string topic_; /// Topic for this datatype
 };
 
+} // namespace types
 } // namespace crdt
-} // namespace replication
 } // namespace caf
 
-#endif // CAF_REPLICATION_CRDT_BASE_DATATYPE_HPP
+#endif // CAF_CRDT_TYPES_BASE_DATATYPE_HPP

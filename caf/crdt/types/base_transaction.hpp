@@ -18,8 +18,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_CRDT_BASE_TRANSACTION_HPP
-#define CAF_REPLICATION_CRDT_BASE_TRANSACTION_HPP
+#ifndef CAF_CRDT_TYPES_BASE_TRANSACTION_HPP
+#define CAF_CRDT_TYPES_BASE_TRANSACTION_HPP
 
 #include <chrono>
 #include <string>
@@ -29,8 +29,8 @@
 #include "caf/node_id.hpp"
 
 namespace caf {
-namespace replication {
 namespace crdt {
+namespace types {
 
 /// Base type for transactions
 struct base_transaction {
@@ -83,8 +83,8 @@ private:
   std::string topic_; /// Topic of transaction
 };
 
-} // namespace crdt
-} // namesapce replication
+} // namespace types
+} // namesapce crdt
 } // namepsace caf
 
-#endif // CAF_REPLICATION_CRDT_BASE_TRANSACTION_HPP
+#endif // CAF_CRDT_TYPES_BASE_TRANSACTION_HPP

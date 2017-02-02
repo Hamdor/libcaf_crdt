@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
-project(caf_examples_replication CXX)
+project(caf_examples_crdt CXX)
 
-add_custom_target(replication_examples)
+add_custom_target(crdt_examples)
 include_directories(${LIBCAF_INCLUDE_DIRS})
 if(${CMAKE_SYSTEM_NAME} MATCHES "Window")
   set(WSLIB -lws2_32)

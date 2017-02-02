@@ -7,7 +7,7 @@
  *                                                                            *
  * Copyright (C) 2011 - 2016                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
- * Marian Triebe <marian.triebe (at) haw-hamburg.de>
+ * Marian Triebe <marian.triebe (at) haw-hamburg.de>                          *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -18,31 +18,41 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_ACTOR_SYSTEM_CONFIG_HPP
-#define CAF_REPLICATION_ACTOR_SYSTEM_CONFIG_HPP
+#ifndef CAF_CRDT_DETAIL_REPLICATOR_HOOKS_HPP
+#define CAF_CRDT_DETAIL_REPLICATOR_HOOKS_HPP
 
-#include "caf/actor_system_config.hpp"
+#include "caf/scoped_actor.hpp"
 
-#include "caf/replication/detail/replica.hpp"
+#include "caf/io/hook.hpp"
 
 namespace caf {
-namespace replication {
+namespace crdt {
+namespace detail {
 
-/// Extended `actor_system_config` to support the replication module.
-struct replicator_config : public virtual caf::actor_system_config {
+/// IO-Hooks used by replicator
+class replicator_hooks : public io::hook {
+public:
+  replicator_hooks(actor_system& sys);
 
-  /// Adds replica `Type` to the replicator (if loaded).
-  template <class Type>
-  actor_system_config& add_replica_type(const std::string& name) {
-    add_message_type<Type>(name);
-    add_message_type<typename Type::internal_t>(name+"::internal");
-    add_actor_type<replication::detail::replica<Type>,
-                   const std::string&>(name);
-    return *this;
-  }
+  /// Called whenever a handshake via a direct TCP connection succeeded.
+  void new_connection_established_cb(const node_id& dest) override;
+
+  /// Called whenever a message from or to a yet unknown node was received.
+  void new_route_added_cb(const node_id&, const node_id& node) override;
+
+  /// Called whenever a direct connection was lost.
+  void connection_lost_cb(const node_id& dest) override;
+
+private:
+
+  void new_connection(const node_id& node);
+
+  scoped_actor self_;
+  actor_system& sys_;
 };
 
-} // namespace replication
+} // namespace detail
+} // namespace crdt
 } // namespace caf
 
-#endif // CAF_REPLICATION_ACTOR_SYSTEM_CONFIG_HPP
+#endif // CAF_CRDT_DETAIL_REPLICATOR_HOOKS_HPP

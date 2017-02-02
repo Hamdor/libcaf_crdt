@@ -18,14 +18,14 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_DETAIL_URI_IMPL_HPP
-#define CAF_REPLICATION_DETAIL_URI_IMPL_HPP
+#ifndef CAF_CRDT_DETAIL_URI_IMPL_HPP
+#define CAF_CRDT_DETAIL_URI_IMPL_HPP
 
 #include "caf/ref_counted.hpp"
 #include "caf/make_counted.hpp"
 
 namespace caf {
-namespace replication {
+namespace crdt {
 namespace detail {
 
 namespace {
@@ -119,7 +119,7 @@ private:
 };
 
 } // namespace detail
-} // namespace replication
+} // namespace crdt
 } // namespace caf
 
-#endif // CAF_REPLICATION_DETAIL_URI_IMPL_HPP
+#endif // CAF_CRDT_DETAIL_URI_IMPL_HPP

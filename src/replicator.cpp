@@ -25,16 +25,16 @@
 
 #include "caf/io/middleman.hpp"
 
-#include "caf/replication/replicator.hpp"
+#include "caf/crdt/replicator.hpp"
 
-#include "caf/replication/detail/register_types.hpp"
-#include "caf/replication/detail/replicator_hooks.hpp"
+#include "caf/crdt/detail/register_types.hpp"
+#include "caf/crdt/detail/replicator_hooks.hpp"
 
 #include <exception>
 
 using namespace std;
 using namespace caf;
-using namespace caf::replication;
+using namespace caf::crdt;
 
 void replicator::start() {
   manager_ = make_replicator_actor(system_);

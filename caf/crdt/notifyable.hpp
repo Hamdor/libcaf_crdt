@@ -18,55 +18,25 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_ATOM_TYPES_HPP
-#define CAF_REPLICATION_ATOM_TYPES_HPP
+#ifndef CAF_CRDT_INTERFACES_HPP
+#define CAF_CRDT_INTERFACES_HPP
 
-#include "caf/atom.hpp"
+#include "caf/typed_actor.hpp"
+
+#include "caf/crdt/atom_types.hpp"
 
 namespace caf {
-namespace replication {
+namespace crdt {
 
-/// Initial atom is recieved after subscribe to a replica
-using initial_atom = atom_constant<atom("init")>;
+/// Interface definition for actors which work with CRDT States and support
+/// notifications.
+template <class State>
+using notifyable = typed_actor<
+  reacts_to<initial_atom, State>,
+  reacts_to<notify_atom, typename State::transaction_t>
+>;
 
-/// Send to subscribed actors when a replica has changed
-using notify_atom = atom_constant<atom("notify")>;
-
-// -------- Internal atoms -----------------------------------------------------
-
-/// @private
-using replicator_atom = atom_constant<atom("replicator")>;
-
-/// @private
-using tick_atom = atom_constant<atom("tick")>;
-
-/// @private
-using shutdown_atom = atom_constant<atom("shutdown")>;
-
-// -------- Replicator communication atoms -------------------------------------
-
-/// @private
-using new_connection_atom = atom_constant<atom("newcon")>;
-
-/// @private
-using connection_lost_atom = atom_constant<atom("conlost")>;
-
-/// @private
-using get_topics_atom = atom_constant<atom("gettopics")>;
-
-/// @private
-using add_topic_atom = atom_constant<atom("addtopic")>;
-
-/// @private
-using remove_topic_atom = atom_constant<atom("remtopic")>;
-
-/// @private
-using update_topics_atom = atom_constant<atom("updatetopi")>;
-
-/// @private
-using create_replica_atom = atom_constant<atom("makerepl")>;
-
-} // namespace replication
+} // namespace crdt
 } // namespace caf
 
-#endif // CAF_REPLICATION_ATOM_TYPES_HPP
+#endif // CAF_CRDT_INTERFACES_HPP

@@ -23,10 +23,10 @@
 
 #include "caf/all.hpp"
 
-#include "caf/replication/uri.hpp"
+#include "caf/crdt/uri.hpp"
 
 using namespace caf;
-using namespace caf::replication;
+using namespace caf::crdt;
 
 CAF_TEST(uri_parse) {
   std::string valid[] = {"gset<int>://videos/*",

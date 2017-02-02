@@ -1,14 +1,14 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
-#include "caf/replication/all.hpp"
+#include "caf/crdt/all.hpp"
 
 #include <unordered_set>
 #include <iostream>
 
 using namespace caf;
 using namespace caf::io;
-using namespace caf::replication;
-using namespace caf::replication::crdt;
+using namespace caf::crdt;
+using namespace caf::crdt::types;
 
 namespace {
 
@@ -21,7 +21,7 @@ constexpr int assumed = actors * to_add;
 class config : public replicator_config {
 public:
   config() {
-    add_replica_type<crdt::gcounter<int>>("gcounter<int>");
+    add_replica_type<types::gcounter<int>>("gcounter<int>");
   }
 };
 
@@ -62,4 +62,4 @@ void caf_main(actor_system& system, const config&) {
 
 } // namespace <anonymous>
 
-CAF_MAIN(io::middleman, replication::replicator)
+CAF_MAIN(io::middleman, crdt::replicator)

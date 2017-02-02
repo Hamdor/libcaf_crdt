@@ -18,41 +18,15 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_DETAIL_REPLICATOR_HOOKS_HPP
-#define CAF_REPLICATION_DETAIL_REPLICATOR_HOOKS_HPP
+#ifndef CAF_CRDT_ALL_HPP
+#define CAF_CRDT_ALL_HPP
 
-#include "caf/scoped_actor.hpp"
+#include "caf/crdt/uri.hpp"
+#include "caf/crdt/atom_types.hpp"
+#include "caf/crdt/notifyable.hpp"
+#include "caf/crdt/replicator.hpp"
+#include "caf/crdt/actor_system_config.hpp"
 
-#include "caf/io/hook.hpp"
+#include "caf/crdt/types/all.hpp"
 
-namespace caf {
-namespace replication {
-namespace detail {
-
-/// IO-Hooks used by replicator
-class replicator_hooks : public io::hook {
-public:
-  replicator_hooks(actor_system& sys);
-
-  /// Called whenever a handshake via a direct TCP connection succeeded.
-  void new_connection_established_cb(const node_id& dest) override;
-
-  /// Called whenever a message from or to a yet unknown node was received.
-  void new_route_added_cb(const node_id&, const node_id& node) override;
-
-  /// Called whenever a direct connection was lost.
-  void connection_lost_cb(const node_id& dest) override;
-
-private:
-
-  void new_connection(const node_id& node);
-
-  scoped_actor self_;
-  actor_system& sys_;
-};
-
-} // namespace detail
-} // namespace replication
-} // namespace caf
-
-#endif // CAF_REPLICATION_DETAIL_REPLICATOR_HOOKS_HPP
+#endif // CAF_CRDT_ALL_HPP

@@ -18,8 +18,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_CRDT_GSET_HPP
-#define CAF_REPLICATION_CRDT_GSET_HPP
+#ifndef CAF_CRDT_TYPES_GSET_HPP
+#define CAF_CRDT_TYPES_GSET_HPP
 
 #include <set>
 #include <algorithm>
@@ -28,14 +28,14 @@
 
 #include "caf/detail/comparable.hpp"
 
-#include "caf/replication/crdt/base_datatype.hpp"
-#include "caf/replication/crdt/base_transaction.hpp"
+#include "caf/crdt/types/base_datatype.hpp"
+#include "caf/crdt/types/base_transaction.hpp"
 
 // TODO: Add unit test for this type!
 
 namespace caf {
-namespace replication {
 namespace crdt {
+namespace types {
 
 //namespace {
 
@@ -289,8 +289,8 @@ struct gset : public cmrdt::gset_impl<T>,
   }
 };
 
+} // namespace types
 } // namespace crdt
-} // namespace replication
 } // namespace caf
 
-#endif // CAF_REPLICATION_CRDT_GSET_HPP
+#endif // CAF_CRDT_TYPES_GSET_HPP

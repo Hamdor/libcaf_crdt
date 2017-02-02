@@ -26,21 +26,21 @@
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
-#include "caf/replication/all.hpp"
+#include "caf/crdt/all.hpp"
 
-#include "caf/replication/detail/distribution_layer.hpp"
+#include "caf/crdt/detail/distribution_layer.hpp"
 
-#include "caf/replication/lamport_clock.hpp"
+#include "caf/crdt/lamport_clock.hpp"
 
 using namespace std;
 using namespace caf;
-using namespace caf::replication;
+using namespace caf::crdt;
 
 namespace std {
 
 template <>
-bool operator< (const std::pair<int, std::unordered_set<caf::replication::uri>>& lhs,
-                const std::pair<int, std::unordered_set<caf::replication::uri>>& rhs) {
+bool operator< (const std::pair<int, std::unordered_set<caf::crdt::uri>>& lhs,
+                const std::pair<int, std::unordered_set<caf::crdt::uri>>& rhs) {
     return lhs.first < rhs.first;
 };
 
@@ -107,8 +107,8 @@ private:
     // Register actor types
     // https://actor-framework.readthedocs.io/en/latest/ConfiguringActorApplications.html?highlight=custom%20actor%20types#adding-custom-actor-types-experimental
 
-    add_actor_type(root_type_id, caf::replication::detail::root_replica_actor<T>);
-    add_actor_type(topic, caf::replication::detail::replica_actor<T>);
+    add_actor_type(root_type_id, caf::crdt::detail::root_replica_actor<T>);
+    add_actor_type(topic, caf::crdt::detail::replica_actor<T>);
     //
     child_args.emplace_back(topic, "/", sync);
     //
@@ -141,19 +141,19 @@ int main(int argc, char* argv[]) {
   //      /
   //  hello
   /*actor_system system{
-    cfg{}.add_replica<crdt::gset<int>>(topic, "/", flush_interval,
+    cfg{}.add_replica<types::gset<int>>(topic, "/", flush_interval,
                                        resync_interval)
-         .add_replica<crdt::gset<int>>(topic, "/sub1", flush_interval,
+         .add_replica<types::gset<int>>(topic, "/sub1", flush_interval,
                                        resync_interval)
-         .add_replica<crdt::gset<int>>(topic, "/sub1/hello", flush_interval,
+         .add_replica<types::gset<int>>(topic, "/sub1/hello", flush_interval,
                                        resync_interval)
-         .add_replica<crdt::gset<int>>(topic, "/sub2", flush_interval,
+         .add_replica<types::gset<int>>(topic, "/sub2", flush_interval,
                                        resync_interval)
          .load<io::middleman>()
          .load<replication::replicator>()};*/
   replicator_config cfg{};
-  cfg.load<io::middleman>().load<replication::replicator>();
-  cfg.add_replica_type<crdt::gset<int>>("gset<int>");
+  cfg.load<io::middleman>().load<crdt::replicator>();
+  cfg.add_replica_type<types::gset<int>>("gset<int>");
   actor_system system{cfg};
   // --- Spawn some workers
   // Spawn a new tree:
@@ -162,18 +162,18 @@ int main(int argc, char* argv[]) {
   //   sub1    sub2
   //   /
   // subsub1
-  auto worker1 = system.spawn<worker<crdt::gset<int>>>("worker1");
-  auto worker2 = system.spawn<worker<crdt::gset<int>>>("worker2");
-  auto worker3 = system.spawn<worker<crdt::gset<int>>>("worker3");
+  auto worker1 = system.spawn<worker<types::gset<int>>>("worker1");
+  auto worker2 = system.spawn<worker<types::gset<int>>>("worker2");
+  auto worker3 = system.spawn<worker<types::gset<int>>>("worker3");
 
   uri u{"gset<int>://rand"};
 
   auto& repl = system.replicator();
-  repl.subscribe<crdt::gset<int>>(u, /*"/sub2",*/ worker1);
-  repl.subscribe<crdt::gset<int>>(u, /*"/sub1/subsub1",*/ worker2);
-  repl.subscribe<crdt::gset<int>>(u, /*"/sub1",*/ worker3);
+  repl.subscribe<types::gset<int>>(u, /*"/sub2",*/ worker1);
+  repl.subscribe<types::gset<int>>(u, /*"/sub1/subsub1",*/ worker2);
+  repl.subscribe<types::gset<int>>(u, /*"/sub1",*/ worker3);
 
-  crdt::gmap<node_id, std::pair<int, std::unordered_set<uri>>> some_map;
+  types::gmap<node_id, std::pair<int, std::unordered_set<uri>>> some_map;
   some_map.assign(node_id{}, make_pair(12, std::unordered_set<uri>{}));
   some_map.assign(node_id{}, make_pair(11, std::unordered_set<uri>{}));
 
@@ -183,7 +183,7 @@ int main(int argc, char* argv[]) {
   // /likes/videos/<id>
   // /likes/comments/<vid>/<id>
   auto topic = system.replicator().topic<std::set<uri>>("all?t=gset<int>://videos/*");
-  auto topic = system.replicator().topic<crdt::gset<int>>("gset<int>://rand");
+  auto topic = system.replicator().topic<types::gset<int>>("gset<int>://rand");
   self.send(worker1, topic);
   spawn([=](event_based_actor* self) {
     self->join(topic, ""); // root (default)

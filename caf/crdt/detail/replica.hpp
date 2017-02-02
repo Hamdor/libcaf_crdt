@@ -18,20 +18,20 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_DETAIL_REPLICA_HPP
-#define CAF_REPLICATION_DETAIL_REPLICA_HPP
+#ifndef CAF_CRDT_DETAIL_REPLICA_HPP
+#define CAF_CRDT_DETAIL_REPLICA_HPP
 
 #include "caf/event_based_actor.hpp"
 
-#include "caf/replication/uri.hpp"
-#include "caf/replication/atom_types.hpp"
-#include "caf/replication/notifyable.hpp"
-#include "caf/replication/replicator_actor.hpp"
+#include "caf/crdt/uri.hpp"
+#include "caf/crdt/atom_types.hpp"
+#include "caf/crdt/notifyable.hpp"
+#include "caf/crdt/replicator_actor.hpp"
 
 #include <unordered_set>
 
 namespace caf {
-namespace replication {
+namespace crdt {
 namespace detail {
 
 ///
@@ -107,7 +107,7 @@ private:
 };
 
 } // namespace detail
-} // namespace replication
+} // namespace crdt
 } // namespace caf
 
-#endif // CAF_REPLICATION_DETAIL_REPLICA_HPP
+#endif // CAF_CRDT_DETAIL_REPLICA_HPP

@@ -18,7 +18,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/replication/replicator_actor.hpp"
+#include "caf/crdt/replicator_actor.hpp"
 
 #include "caf/message.hpp"
 #include "caf/node_id.hpp"
@@ -26,14 +26,14 @@
 
 #include "caf/io/middleman.hpp"
 
-#include "caf/replication/detail/distribution_layer.hpp"
+#include "caf/crdt/detail/distribution_layer.hpp"
 
 #include <tuple>
 #include <vector>
 #include <unordered_map>
 
 namespace caf {
-namespace replication {
+namespace crdt {
 
 namespace {
 
@@ -134,5 +134,5 @@ replicator_actor make_replicator_actor(actor_system& sys) {
   return sys.spawn<replicator_actor_impl, hidden>();
 }
 
-} // namespace replication
+} // namespace crdt
 } // namespace caf

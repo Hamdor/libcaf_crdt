@@ -18,41 +18,12 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_DETAIL_REGISTER_TYPES_HPP
-#define CAF_REPLICATION_DETAIL_REGISTER_TYPES_HPP
+#ifndef CAF_CRDT_TYPES_ALL_HPP
+#define CAF_CRDT_TYPES_ALL_HPP
 
-#include "caf/actor_system_config.hpp"
+#include "caf/crdt/types/gmap.hpp"
+#include "caf/crdt/types/gset.hpp"
+#include "caf/crdt/types/gcounter.hpp"
+#include "caf/crdt/types/lww_register.hpp"
 
-#include "caf/replication/crdt/all.hpp"
-
-#include "caf/replication/detail/replica.hpp"
-
-namespace caf {
-namespace replication {
-namespace detail {
-
-struct register_types {
-
-  register_types(actor_system_config& cfg) : cfg_(cfg) {
-    // nop
-  }
-
-  void operator()() noexcept {
-    cfg_.add_message_type<crdt::base_datatype>("base_datatype");
-    cfg_.add_message_type<uri>("uri");
-    cfg_.add_message_type<std::unordered_set<uri>>("unordered_set<uri>");
-    cfg_.add_message_type<crdt::gmap<node_id, std::pair<size_t, std::unordered_set<uri>>>>("gmap_distlayer");
-    // TODO: Base klasse benötigt?
-    // Datentypen wie z.B. gset<node_id> registrieren
-    //                     gset<actor_addr>, gset<actor>,...
-  }
-
-private:
-  actor_system_config& cfg_;
-};
-
-} // namespace detail
-} // namespace replication
-} // namespace caf
-
-#endif // CAF_REPLICATION_DETAIL_REGISTER_TYPES_HPP
+#endif // CAF_CRDT_TYPES_ALL_HPP

@@ -18,65 +18,55 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_REPLICATOR_ACTOR_HPP
-#define CAF_REPLICATION_REPLICATOR_ACTOR_HPP
+#ifndef CAF_CRDT_ATOM_TYPES_HPP
+#define CAF_CRDT_ATOM_TYPES_HPP
 
-#include "caf/fwd.hpp"
-#include "caf/node_id.hpp"
-
-#include "caf/typed_actor.hpp"
-
-#include "caf/replication/uri.hpp"
-#include "caf/replication/atom_types.hpp"
-
-#include <unordered_set>
+#include "caf/atom.hpp"
 
 namespace caf {
-namespace replication {
-
-// Forward declaration
-
 namespace crdt {
 
-template <class Key, class Value> struct gmap;
+/// Initial atom is recieved after subscribe to a replica
+using initial_atom = atom_constant<atom("init")>;
+
+/// Send to subscribed actors when a replica has changed
+using notify_atom = atom_constant<atom("notify")>;
+
+// -------- Internal atoms -----------------------------------------------------
+
+/// @private
+using replicator_atom = atom_constant<atom("replicator")>;
+
+/// @private
+using tick_atom = atom_constant<atom("tick")>;
+
+/// @private
+using shutdown_atom = atom_constant<atom("shutdown")>;
+
+// -------- Replicator communication atoms -------------------------------------
+
+/// @private
+using new_connection_atom = atom_constant<atom("newcon")>;
+
+/// @private
+using connection_lost_atom = atom_constant<atom("conlost")>;
+
+/// @private
+using get_topics_atom = atom_constant<atom("gettopics")>;
+
+/// @private
+using add_topic_atom = atom_constant<atom("addtopic")>;
+
+/// @private
+using remove_topic_atom = atom_constant<atom("remtopic")>;
+
+/// @private
+using update_topics_atom = atom_constant<atom("updatetopi")>;
+
+/// @private
+using create_replica_atom = atom_constant<atom("makerepl")>;
 
 } // namespace crdt
-
-/// Interface of replicator
-using replicator_actor = typed_actor<
-  /// Topic message pair, where the message contains updates for a topic
-  reacts_to<uri, message>,
-  /// Internal tick message to flush updates
-  reacts_to<tick_atom>,
-  /// A new connection to a CAF node (node_id) is established
-  reacts_to<new_connection_atom, node_id>,
-  /// A connection to a CAF node (node_id) is lost
-  reacts_to<connection_lost_atom, node_id>,
-  /// Return a unordered set of uris to sender
-  replies_to<get_topics_atom>::with<std::unordered_set<uri>>,
-
-
-  /// Adds a topic to senders map
-  reacts_to<add_topic_atom, uri>,
-  /// Removes a topic from senders map
-  reacts_to<remove_topic_atom, uri>,
-
-
-  ///
-  reacts_to<update_topics_atom,
-            crdt::gmap<node_id, std::pair<size_t, std::unordered_set<uri>>>>,
-
-
-  /// Subscribes a actor to a replica topic
-  reacts_to<subscribe_atom, uri>,
-  /// Unsubscribes a actor from a replica topic
-  reacts_to<unsubscribe_atom, uri>
->;
-
-///@relates replicator_actor
-replicator_actor make_replicator_actor(actor_system& sys);
-
-} // namespace replication
 } // namespace caf
 
-#endif // CAF_REPLICATION_REPLICATOR_ACTOR_HPP
+#endif // CAF_CRDT_ATOM_TYPES_HPP

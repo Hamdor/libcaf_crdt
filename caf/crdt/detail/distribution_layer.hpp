@@ -18,31 +18,31 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_DETAIL_DISTRIBUTION_LAYER_HPP
-#define CAF_REPLICATION_DETAIL_DISTRIBUTION_LAYER_HPP
+#ifndef CAF_CRDT_DETAIL_DISTRIBUTION_LAYER_HPP
+#define CAF_CRDT_DETAIL_DISTRIBUTION_LAYER_HPP
 
 #include "caf/node_id.hpp"
 
-#include "caf/replication/uri.hpp"
+#include "caf/crdt/uri.hpp"
 
-#include "caf/replication/crdt/gmap.hpp"
+#include "caf/crdt/types/gmap.hpp"
 
 #include <unordered_map>
 #include <unordered_set>
 
 namespace std {
 
-inline bool operator< (const std::unordered_set<caf::replication::uri>& lhs,
-                       const std::unordered_set<caf::replication::uri>& rhs) {
+inline bool operator< (const std::unordered_set<caf::crdt::uri>& lhs,
+                       const std::unordered_set<caf::crdt::uri>& rhs) {
   return lhs.size() < rhs.size();
 }
 
 template <>
-struct hash<std::pair<int, std::unordered_set<caf::replication::uri>>> {
-  size_t operator()(const std::pair<int, std::unordered_set<caf::replication::uri>>& u) const {
+struct hash<std::pair<int, std::unordered_set<caf::crdt::uri>>> {
+  size_t operator()(const std::pair<int, std::unordered_set<caf::crdt::uri>>& u) const {
     size_t val = 0;
     for (auto& e : u.second)
-      val |= hash<caf::replication::uri>()(e);
+      val |= hash<caf::crdt::uri>()(e);
     return val + 73 * u.first;
   }
 
@@ -51,7 +51,7 @@ struct hash<std::pair<int, std::unordered_set<caf::replication::uri>>> {
 } // namespace std
 
 namespace caf {
-namespace replication {
+namespace crdt {
 namespace detail {
 
 /// Manages propagation of updates between nodes. Keeps track which nodes are
@@ -59,7 +59,7 @@ namespace detail {
 struct distribution_layer {
 
   /// The payload type is used between nodes to propagate intrested topics
-  using payload_type = crdt::gmap<
+  using payload_type = types::gmap<
     node_id,
     std::pair<size_t, std::unordered_set<uri>
   >>;
@@ -158,13 +158,13 @@ private:
       send_as(impl_, rep.second, update_topics_atom::value, payload);
   }
 
-  crdt::gmap<node_id, std::pair<size_t, std::unordered_set<uri>>> topics_;
+  types::gmap<node_id, std::pair<size_t, std::unordered_set<uri>>> topics_;
   std::unordered_map<node_id, replicator_actor> replicators_;
   actor impl_;
 };
 
 } // namespace detail
-} // namespace replication
+} // namespace crdt
 } // namespace caf
 
-#endif // CAF_REPLICATION_DETAIL_DISTRIBUTION_LAYER_HPP
+#endif // CAF_CRDT_DETAIL_DISTRIBUTION_LAYER_HPP

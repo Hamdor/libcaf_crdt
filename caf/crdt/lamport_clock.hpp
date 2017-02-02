@@ -1,12 +1,12 @@
 
 
-#ifndef CAF_REPLICATION_LAMPORT_CLOCK_HPP
-#define CAF_REPLICATION_LAMPORT_CLOCK_HPP
+#ifndef CAF_CRDT_LAMPORT_CLOCK_HPP
+#define CAF_CRDT_LAMPORT_CLOCK_HPP
 
 #include "caf/detail/comparable.hpp"
 
 namespace caf {
-namespace replication {
+namespace crdt {
 
 /// Implementation of a lamport clock
 struct lamport_clock : caf::detail::comparable<lamport_clock>,
@@ -55,7 +55,7 @@ private:
   uint64_t time_;
 };
 
-} // namespace replication
+} // namespace crdt
 } // namespace caf
 
-#endif // CAF_REPLICATION_LAMPORT_CLOCK_HPP
+#endif // CAF_CRDT_LAMPORT_CLOCK_HPP

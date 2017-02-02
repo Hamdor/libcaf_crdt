@@ -18,11 +18,11 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/replication/detail/replicator_hooks.hpp"
+#include "caf/crdt/detail/replicator_hooks.hpp"
 
-#include "caf/replication/replicator.hpp"
+#include "caf/crdt/replicator.hpp"
 
-using namespace caf::replication::detail;
+using namespace caf::crdt::detail;
 
 replicator_hooks::replicator_hooks(actor_system& sys)
     : io::hook(sys),

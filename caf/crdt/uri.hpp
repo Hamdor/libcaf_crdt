@@ -18,18 +18,18 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_URI_HPP
-#define CAF_REPLICATION_URI_HPP
+#ifndef CAF_CRDT_URI_HPP
+#define CAF_CRDT_URI_HPP
 
 #include "caf/actor_system.hpp"
 #include "caf/intrusive_ptr.hpp"
 
 #include "caf/detail/comparable.hpp"
 
-#include "caf/replication/detail/uri_impl.hpp"
+#include "caf/crdt/detail/uri_impl.hpp"
 
 namespace caf {
-namespace replication {
+namespace crdt {
 
 /// Uri implementation, that supports a scheme and a path.
 class uri : public caf::detail::comparable<uri> {
@@ -98,18 +98,18 @@ private:
   intrusive_ptr<impl> impl_;
 };
 
-} // namespace replication
+} // namespace crdt
 } // namespace caf
 
 namespace std {
 
 template <>
-struct hash<caf::replication::uri> {
-  inline size_t operator()(const caf::replication::uri& u) const {
+struct hash<caf::crdt::uri> {
+  inline size_t operator()(const caf::crdt::uri& u) const {
     return hash<std::string>()(u.to_string());
   }
 };
 
 } // namespace std
 
-#endif // CAF_REPLICATION_URI_HPP
+#endif // CAF_CRDT_URI_HPP

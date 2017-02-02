@@ -18,8 +18,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_CRDT_GCOUNTER_HPP
-#define CAF_REPLICATION_CRDT_GCOUNTER_HPP
+#ifndef CAF_CRDT_TYPES_GCOUNTER_HPP
+#define CAF_CRDT_TYPES_GCOUNTER_HPP
 
 #include <tuple>
 #include <vector>
@@ -27,14 +27,14 @@
 
 #include "caf/node_id.hpp"
 
-#include "caf/replication/crdt/base_datatype.hpp"
-#include "caf/replication/crdt/base_transaction.hpp"
+#include "caf/crdt/types/base_datatype.hpp"
+#include "caf/crdt/types/base_transaction.hpp"
 
 // TODO: Add unit test for this type!
 
 namespace caf {
-namespace replication {
 namespace crdt {
+namespace types {
 
 //namespace {
 
@@ -270,8 +270,8 @@ struct gcounter : public cmrdt::gcounter_impl<T> {
   gcounter() = default;
 };
 
+} // namespace types
 } // namespace crdt
-} // namespace replication
 } // namespace caf
 
-#endif // CAF_REPLICATION_CRDT_GCOUNTER_HPP
+#endif // CAF_CRDT_TYPES_GCOUNTER_HPP

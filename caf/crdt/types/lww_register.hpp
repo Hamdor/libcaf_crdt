@@ -18,23 +18,23 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_CRDT_LWW_REGISTER_HPP
-#define CAF_REPLICATION_CRDT_LWW_REGISTER_HPP
+#ifndef CAF_CRDT_TYPES_LWW_REGISTER_HPP
+#define CAF_CRDT_TYPES_LWW_REGISTER_HPP
 
 #include "caf/node_id.hpp"
 
-#include "caf/replication/lamport_clock.hpp"
+#include "caf/crdt/lamport_clock.hpp"
 
-#include "caf/replication/crdt/base_datatype.hpp"
-#include "caf/replication/crdt/base_transaction.hpp"
+#include "caf/crdt/types/base_datatype.hpp"
+#include "caf/crdt/types/base_transaction.hpp"
 
 // TODO: Add unit test for this type!
 // TODO: Reduce this implementation,
 //       for this type it is possible to use just one class
 
 namespace caf {
-namespace replication {
 namespace crdt {
+namespace types {
 
 //namespace {
 
@@ -236,8 +236,8 @@ struct lww_reg : public cmrdt::lww_reg_impl<T>,
   using internal_t = delta::lww_reg_impl<T>;
 };
 
+} // namespace types
 } // namespace crdt
-} // namespace replication
 } // namespace caf
 
-#endif // CAF_REPLICATION_CRDT_LWW_REGISTER_HPP
+#endif // CAF_CRDT_TYPES_LWW_REGISTER_HPP

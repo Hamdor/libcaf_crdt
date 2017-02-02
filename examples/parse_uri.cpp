@@ -20,16 +20,16 @@
 
 #include "caf/all.hpp"
 
-#include "caf/replication/all.hpp"
+#include "caf/crdt/all.hpp"
 
-#include "caf/replication/uri.hpp"
+#include "caf/crdt/uri.hpp"
 
 #include <set>
 #include <iostream>
 
 using namespace caf;
-using namespace caf::replication;
-using namespace caf::replication::crdt;
+using namespace caf::crdt;
+using namespace caf::crdt::types;
 
 struct some_crap {};
 
@@ -53,12 +53,12 @@ int main() {
   }
   // ----
   auto cfg = actor_system_config{};
-  cfg.add_message_type<crdt::gset<int>>("gset<int>");
+  cfg.add_message_type<types::gset<int>>("gset<int>");
   actor_system system{cfg};
   // ----
   auto u = uri{"gset<int>://rand"};
   std::cout << std::boolalpha << "assumed (true, false): "
-            << u.match_rtti<crdt::gset<int>>(system) << ", "
-            << u.match_rtti<crdt::gset<float>>(system) << std::endl;
+            << u.match_rtti<types::gset<int>>(system) << ", "
+            << u.match_rtti<types::gset<float>>(system) << std::endl;
   return 0;
 }

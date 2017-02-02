@@ -18,17 +18,17 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_CRDT_GMAP_HPP
-#define CAF_REPLICATION_CRDT_GMAP_HPP
+#ifndef CAF_CRDT_TYPES_GMAP_HPP
+#define CAF_CRDT_TYPES_GMAP_HPP
 
-#include "caf/replication/crdt/base_datatype.hpp"
-#include "caf/replication/crdt/base_transaction.hpp"
+#include "caf/crdt/types/base_datatype.hpp"
+#include "caf/crdt/types/base_transaction.hpp"
 
 #include <map>
 
 namespace caf {
-namespace replication {
 namespace crdt {
+namespace types {
 
 //namespace {
 
@@ -253,8 +253,8 @@ struct gmap : public cmrdt::gmap_impl<Key, Value> {
   using internal_t = delta::gmap_impl<Key, Value>;
 };
 
+} // namespace types
 } // namespace crdt
-} // namespace replication
 } // namespace caf
 
-#endif // CAF_REPLICATION_CRDT_GMAP_HPP
+#endif // CAF_CRDT_TYPES_GMAP_HPP

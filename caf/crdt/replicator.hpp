@@ -18,15 +18,69 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_ALL_HPP
-#define CAF_REPLICATION_ALL_HPP
+#ifndef CAF_CRDT_REPLICATOR_HPP
+#define CAF_CRDT_REPLICATOR_HPP
 
-#include "caf/replication/uri.hpp"
-#include "caf/replication/atom_types.hpp"
-#include "caf/replication/notifyable.hpp"
-#include "caf/replication/replicator.hpp"
-#include "caf/replication/actor_system_config.hpp"
+#include "caf/config.hpp"
+#include "caf/actor_system.hpp"
 
-#include "caf/replication/crdt/all.hpp"
+#include "caf/crdt/uri.hpp"
+#include "caf/crdt/notifyable.hpp"
+#include "caf/crdt/replicator_actor.hpp"
 
-#endif // CAF_REPLICATION_ALL_HPP
+#include "caf/crdt/detail/replica.hpp"
+
+namespace caf {
+namespace crdt {
+
+///
+class replicator : public actor_system::module {
+public:
+  friend class actor_system;
+  replicator(const replicator&) = delete;
+  replicator& operator=(const replicator&) = delete;
+
+  void start() override;
+  void stop() override;
+  void init(actor_system_config&) override;
+
+  id_t id() const override;
+
+  void* subtype_ptr() override;
+
+  static actor_system::module* make(actor_system& sys,
+                                    caf::detail::type_list<>);
+
+  replicator_actor actor_handle();
+
+  inline actor_system& system() const {
+    return system_;
+  }
+
+protected:
+  replicator(actor_system&);
+  ~replicator();
+
+private:
+  actor_system& system_;
+  replicator_actor manager_;
+
+public:
+
+  ///
+  template <class T>
+  void subscribe(const uri& u, const notifyable<T>& subscriber) {
+    send_as(subscriber, manager_, subscribe_atom::value, u);
+  }
+
+  ///
+  template <class T>
+  void unsubscribe(const uri& u, const notifyable<T>& subscriber) {
+    send_as(subscriber, manager_, unsubscribe_atom::value, u);
+  }
+};
+
+} // namespace crdt
+} // namespace caf
+
+#endif // CAF_CRDT_REPLICATOR_HPP
