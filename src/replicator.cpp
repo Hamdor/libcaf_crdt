@@ -43,7 +43,6 @@ void replicator::start() {
 }
 
 void replicator::stop() {
-  std::cout << __PRETTY_FUNCTION__ << std::endl;
   system_.registry().erase(replicator_atom::value);
   scoped_actor self{system(), true};
   self->monitor(manager_);

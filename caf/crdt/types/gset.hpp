@@ -181,8 +181,19 @@ public:
 
   gset_impl() = default;
 
+  gset_impl(const gset_impl&) = default;
+
   gset_impl(std::set<T> set) : set_(std::move(set)) {
     // nop
+  }
+
+  /// Move assignment, if operations where done, before the state was
+  /// initialized we have to send all done operations to other replicas.
+  gset_impl& operator=(gset_impl&& other) {
+    base_datatype::operator=(std::move(other));
+    if (set_.size())
+      publish(transaction_t{topic(), owner(), operator_t::insertion, set_});
+    return *this;
   }
 
   /// Insert a element into this gset
@@ -242,6 +253,9 @@ public:
     for (auto& transaction : history.values())
       set_.emplace(transaction);
   }
+
+  /// @returns the number of elements in the set
+  size_t size() const { return set_.size(); }
 
   /// Immutable access to underlying set
   const std::set<T>& get_immutable() const { return set_; }

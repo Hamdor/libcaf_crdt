@@ -18,10 +18,10 @@ constexpr int actors  = 10;
 constexpr int to_add  = 4;
 constexpr int assumed = actors * to_add;
 
-class config : public replicator_config {
+class config : public crdt_config {
 public:
   config() {
-    add_replica_type<types::gcounter<int>>("gcounter<int>");
+    add_crdt<types::gcounter<int>>("gcounter<int>");
   }
 };
 
@@ -32,8 +32,8 @@ public:
   }
 
   virtual void on_exit() override {
-    std::cout << "on_exit" << std::endl;
     system().replicator().unsubscribe<gcounter<int>>(u, this);
+    gcounter<int>::base::on_exit();
   }
 
 protected:

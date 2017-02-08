@@ -18,8 +18,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_CRDT_ACTOR_SYSTEM_CONFIG_HPP
-#define CAF_CRDT_ACTOR_SYSTEM_CONFIG_HPP
+#ifndef CAF_CRDT_CRDT_CONFIG_HPP
+#define CAF_CRDT_CRDT_CONFIG_HPP
 
 #include "caf/actor_system_config.hpp"
 
@@ -28,14 +28,18 @@
 namespace caf {
 namespace crdt {
 
-/// Extended `actor_system_config` to support the replication module.
-struct replicator_config : public virtual caf::actor_system_config {
+/// Extended `actor_system_config` to support the CRDT module.
+struct crdt_config : public virtual actor_system_config {
 
-  /// Adds replica `Type` to the replicator (if loaded).
+  crdt_config() : actor_system_config() {
+    load<crdt::replicator>();
+  }
+
+  /// Adds crdt `Type` to the module
   template <class Type>
-  actor_system_config& add_replica_type(const std::string& name) {
+  actor_system_config& add_crdt(const std::string& name) {
     add_message_type<Type>(name);
-    add_message_type<typename Type::internal_t>(name+"::internal");
+    //add_message_type<typename Type::internal_t>(name + "::internal");
     add_actor_type<crdt::detail::replica<Type>,
                    const std::string&>(name);
     return *this;
@@ -45,4 +49,4 @@ struct replicator_config : public virtual caf::actor_system_config {
 } // namespace crdt
 } // namespace caf
 
-#endif // CAF_CRDT_ACTOR_SYSTEM_CONFIG_HPP
+#endif // CAF_CRDT_CRDT_CONFIG_HPP

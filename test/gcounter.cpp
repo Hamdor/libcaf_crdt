@@ -25,72 +25,116 @@
 #include "caf/io/all.hpp"
 #include "caf/crdt/all.hpp"
 
-using namespace std;
 using namespace caf;
 using namespace caf::crdt;
 
 namespace {
 
-template <class State>
-class worker : public notifyable<State>::base {
-public:
-  worker(actor_config& cfg, std::string some_str)
-      : notifyable<State>::base(cfg), id_string_(std::move(some_str)) {
-    // nop
+constexpr int buddy_count = 5;
+constexpr int runs        = 10;
+
+constexpr int assumed_msgs = buddy_count * runs;
+
+uri u{"gset<int>://rand"};
+
+using request_atom = atom_constant<atom("req")>;
+using verify_atom = atom_constant<atom("verify")>;
+using checked_atom = atom_constant<atom("checked")>;
+
+using testee_type = typed_actor<
+  replies_to<tick_atom>::with<int>,
+  replies_to<request_atom>::with<types::gset<int>>
+>::extend_with<notifyable<types::gset<int>>>;
+
+struct testee : public testee_type::base {
+  testee(actor_config& cfg)
+    : testee_type::base(cfg) {
+    system().replicator().subscribe<types::gset<int>>(u, this);
   }
 
-  typename notifyable<State>::behavior_type make_behavior() override {
+protected:
+  typename testee_type::behavior_type make_behavior() override {
     return {
-      [&](initial_atom, State& state) {
-        aout(this) << id_string_ << ": init" << endl;
-        // Set initial state
-        // The recieved state is configured to propagate update
-        // to the local top level replica. This handler is just called once.
+      [&](initial_atom, types::gset<int>& state) {
         state_ = std::move(state);
       },
-      [&](notify_atom, const typename State::transaction_t& operations) {
-        // Recieved operations from other replicas, apply the operations
-        // to this local state and print values.
+      [&](notify_atom, const types::gset<int>::transaction_t& operations) {
         state_.apply(operations);
-        aout(this) << id_string_ << ": " << operations.ticks() << "ns"
-                   << ", insert: " << ", topic: " << operations.topic() << std::endl;
-        for (auto& val : operations.values())
-          aout(this) << val << " ";
-        aout(this) << endl;
       },
-      after(std::chrono::seconds(1)) >> [&] {
-        if (tick_count_++ == 10) this->quit();
-        // Generate some random values, we assume, that other subscribers
-        // will recieve these updates. This simulates some work.
-        int rnd = std::rand() + *(id_string_.end()-1);
-        aout(this) << id_string_ << ": generated rnd " << rnd << endl;
+      // --- Generate new data
+      [&](tick_atom) {
+        auto rnd = std::rand();
         state_.insert(rnd);
+        return rnd;
+      },
+      [&](request_atom) {
+        return state_;
       }
     };
   }
 
 private:
-  std::string id_string_; /// String to identify this actor in cout
-  State state_; /// State of worker
-  int tick_count_;
+  types::gset<int> state_;
+};
+
+struct verifier : public event_based_actor {
+  verifier(actor_config& cfg) : event_based_actor(cfg) {
+    // nop
+  }
+
+protected:
+  virtual behavior make_behavior() override {
+    // Spawn testees
+    for (int i = 0; i < buddy_count; ++i)
+      buddies_.emplace(spawn<testee>());
+    // Send initial tasks
+    for (int i = 0; i < runs; ++i)
+      for (auto& buddy : buddies_)
+        send(buddy, tick_atom::value);
+    return {
+      // A testee inserted a value n
+      [&](int n) {
+        values_.insert(n);
+        // Let some time pass to give everyone the chance to apply pending
+        // updates
+        if (++msgs == assumed_msgs)
+          delayed_send(this, std::chrono::seconds(2), verify_atom::value);
+      },
+      // trigger testees to send their state back
+      [&](verify_atom) {
+        for (auto& buddy : buddies_)
+          send(buddy, request_atom::value);
+      },
+      // check testees states if they are equal
+      [&](const types::gset<int>& check) {
+        CAF_CHECK(check.equal(values_));
+        send(this, checked_atom::value);
+      },
+      // if all are checked, just exit all actors...
+      [&](checked_atom) {
+        if (++checked_ == buddy_count) {
+          for (auto& buddy : buddies_)
+            anon_send_exit(buddy, exit_reason::user_shutdown);
+          quit();
+        }
+      }
+    };
+  }
+
+private:
+  int checked_ = 0;
+  int msgs = 0;
+  std::set<int> values_;
+  std::set<testee_type> buddies_;
 };
 
 } // namespace <anonymous>
 
-CAF_TEST(test) {
-  uri u{"gset<int>://rand"};
-  auto cfg = replicator_config{};
-  cfg.load<io::middleman>().load<crdt::replicator>();
-  cfg.add_replica_type<types::gset<int>>("gset<int>");
+CAF_TEST(run_inserts) {
+  crdt_config cfg{};
+  cfg.add_crdt<types::gset<int>>("gset<int>")
+     .add_message_type<std::set<int>>("set_int")
+     .load<io::middleman>();
   actor_system system{cfg};
-
-  auto worker1 = system.spawn<worker<types::gset<int>>>("worker1");
-  auto worker2 = system.spawn<worker<types::gset<int>>>("worker2");
-  auto worker3 = system.spawn<worker<types::gset<int>>>("worker3");
-  // ...
-  auto& repl = system.replicator();
-  repl.subscribe<types::gset<int>>(u, worker1);
-  repl.subscribe<types::gset<int>>(u, worker2);
-  repl.subscribe<types::gset<int>>(u, worker3);
-  // TODO: Add collector and compare if all states are equiv...
+  system.spawn<verifier>();
 }

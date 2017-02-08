@@ -25,7 +25,7 @@
 #include "caf/crdt/atom_types.hpp"
 #include "caf/crdt/notifyable.hpp"
 #include "caf/crdt/replicator.hpp"
-#include "caf/crdt/actor_system_config.hpp"
+#include "caf/crdt/crdt_config.hpp"
 
 #include "caf/crdt/types/all.hpp"
 

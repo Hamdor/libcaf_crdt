@@ -151,9 +151,9 @@ int main(int argc, char* argv[]) {
                                        resync_interval)
          .load<io::middleman>()
          .load<replication::replicator>()};*/
-  replicator_config cfg{};
+  crdt_config cfg{};
   cfg.load<io::middleman>().load<crdt::replicator>();
-  cfg.add_replica_type<types::gset<int>>("gset<int>");
+  cfg.add_crdt<types::gset<int>>("gset<int>");
   actor_system system{cfg};
   // --- Spawn some workers
   // Spawn a new tree:
