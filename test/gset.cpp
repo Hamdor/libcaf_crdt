@@ -18,7 +18,7 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE gcounter
+#define CAF_SUITE gset
 #include "caf/test/unit_test.hpp"
 
 #include "caf/all.hpp"
