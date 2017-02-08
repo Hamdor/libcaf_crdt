@@ -130,6 +130,7 @@ private:
 
 } // namespace <anonymous>
 
+// This test let some actors work with the replica data
 CAF_TEST(run_inserts) {
   crdt_config cfg{};
   cfg.add_crdt<types::gset<int>>("gset<int>")
@@ -137,4 +138,15 @@ CAF_TEST(run_inserts) {
      .load<io::middleman>();
   actor_system system{cfg};
   system.spawn<verifier>();
+}
+
+// Tests the initialization process of crdt instances
+CAF_TEST(move) {
+  types::gset<int> def; // Default initialized state
+  def.insert(2);
+  types::gset<int> init; // Initialized state from replica actor
+  init.insert(1);
+  def = std::move(init); // This is how actors take over the initialized state
+  CAF_CHECK(def.element_of(1));
+  CAF_CHECK(def.element_of(2));
 }

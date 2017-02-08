@@ -180,7 +180,6 @@ public:
   }
 
   gset_impl() = default;
-
   gset_impl(const gset_impl&) = default;
 
   gset_impl(std::set<T> set) : set_(std::move(set)) {
@@ -191,8 +190,14 @@ public:
   /// initialized we have to send all done operations to other replicas.
   gset_impl& operator=(gset_impl&& other) {
     base_datatype::operator=(std::move(other));
-    if (set_.size())
+    if (!size())
+      set_ = std::move(other.set_); // just move
+    else {
+      // merge both and publish our operations...
       publish(transaction_t{topic(), owner(), operator_t::insertion, set_});
+      for (auto& e : other.set_)
+        set_.emplace(std::move(e));
+    }
     return *this;
   }
 
