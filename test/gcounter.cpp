@@ -128,6 +128,16 @@ private:
   std::set<testee_type> buddies_;
 };
 
+void test_init(const std::set<int>& init_val,
+               const std::set<int>& def_val,
+               const std::set<int>& assumed) {
+  types::gset<int> init{std::move(init_val)};
+  types::gset<int> def{std::move(def_val)};
+  def = std::move(init);
+  for (auto& e : assumed)
+    CAF_CHECK(def.element_of(e));
+}
+
 } // namespace <anonymous>
 
 // This test let some actors work with the replica data
@@ -141,12 +151,16 @@ CAF_TEST(run_inserts) {
 }
 
 // Tests the initialization process of crdt instances
-CAF_TEST(move) {
-  types::gset<int> def; // Default initialized state
-  def.insert(2);
-  types::gset<int> init; // Initialized state from replica actor
-  init.insert(1);
-  def = std::move(init); // This is how actors take over the initialized state
-  CAF_CHECK(def.element_of(1));
-  CAF_CHECK(def.element_of(2));
+CAF_TEST(move1) {
+  test_init({1},{2},{1,2});
+}
+
+// Tests the initialization process of crdt instances
+CAF_TEST(move2) {
+  test_init({1},{},{1});
+}
+
+// Tests the initialization process of crdt instances
+CAF_TEST(move3) {
+  test_init({},{1},{1});
 }
