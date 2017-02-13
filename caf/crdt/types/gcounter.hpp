@@ -135,8 +135,8 @@ struct gcounter_impl {
         }
       }
     };
-    m(&other, this, false);
-    m(this, &other, true);
+    m(&other, this, true);
+    m(this, &other, false);
     return {std::move(delta), std::move(diff)};
   }
 

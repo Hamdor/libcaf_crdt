@@ -27,6 +27,10 @@ using namespace caf::crdt;
 
 namespace {
 
+constexpr int nr_spawn = 5;
+constexpr int inc_by   = 10;
+constexpr int expected = nr_spawn * inc_by;
+
 static uri u = uri{"gcounter<int>://counter"};
 
 struct port_dummy : public event_based_actor {
@@ -48,15 +52,15 @@ protected:
   typename types::gcounter<int>::behavior_type make_behavior() override {
     return {
       [&](initial_atom, types::gcounter<int>& state) {
-        aout(this) << "init\n";
         state_ = std::move(state);
-        state_ += 10;
+        state_ += inc_by;
       },
       [&](notify_atom, const types::gcounter<int>::transaction_t& t) {
-        aout(this) << "apply\n";
         state_.apply(t);
-        if (state_.count() == 20)
+        if (state_.count() == expected) {
+          aout(this) << "Count is: " << state_.count() << " ==> quit()\n";
           quit();
+        }
       }
     };
   }
@@ -92,9 +96,10 @@ void caf_main(actor_system& system, const config& cfg) {
   }
   std::this_thread::sleep_for(std::chrono::seconds(1));
   // ----------------------
-  auto a1 = system.spawn<incrementer>();
-  auto a2 = system2.spawn<incrementer>();
-
+  for (int i = 0; i < nr_spawn; ++i) {
+   system.spawn<incrementer>();
+   system2.spawn<incrementer>();
+  }
   std::this_thread::sleep_for(std::chrono::seconds(5));
 }
 

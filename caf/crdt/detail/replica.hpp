@@ -91,6 +91,7 @@ protected:
         this->send(this->home_system().replicator().actor_handle(), topic_,
                    count_++ % 10 ? make_message(cvrdt_) : make_message(buffer_));
         this->delayed_send(this, std::chrono::seconds(1), tick_atom::value);
+        buffer_.clear();
       }
     };
   }
