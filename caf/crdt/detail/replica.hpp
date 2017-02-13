@@ -44,7 +44,6 @@ public:
   }
 
   virtual void on_exit() override {
-    std::cout << "replica::exit..." << std::endl;
     event_based_actor::on_exit();
   }
 
@@ -63,12 +62,12 @@ protected:
         delta = cvrdt_.merge(delta);
         if (delta.empty())
           return;
-        auto ops = delta.get_cmrdt_transactions(topic_.to_string());
+        auto ops = delta.get_cmrdt_transactions(topic_.str());
         for (auto& subs : subscribers_)
           this->send(subs, notify_atom::value, ops);
       },
       [&](publish_atom, const typename T::transaction_t& transaction) {
-        auto delta = cvrdt_.apply(transaction);
+        auto delta = cvrdt_.apply(transaction, this->node());
         if (delta.empty())
           return;
         buffer_.merge(delta);
@@ -79,27 +78,25 @@ protected:
       [&](subscribe_atom, const actor& subscriber) {
         subscribers_.emplace(subscriber);
         T state;
-        state.apply(cvrdt_.get_cmrdt_transactions(topic_.to_string()));
+        state.apply(cvrdt_.get_cmrdt_transactions(topic_.str()));
         state.set_owner(subscriber);
         state.set_parent(this);
-        state.set_topic(topic_.to_string());
+        state.set_topic(topic_.str());
         this->send(subscriber, initial_atom::value, std::move(state));
       },
       [&](unsubscribe_atom, const actor& subscriber) {
         subscribers_.erase(subscriber);
       },
       [&](tick_atom) {
-        if (!buffer_.empty()) {
-          this->send(this->home_system().replicator().actor_handle(), topic_,
-                     make_message(buffer_));
-          buffer_.clear();
-        }
+        this->send(this->home_system().replicator().actor_handle(), topic_,
+                   count_++ % 10 ? make_message(cvrdt_) : make_message(buffer_));
         this->delayed_send(this, std::chrono::seconds(1), tick_atom::value);
       }
     };
   }
 
 private:
+  size_t count_;
   uri topic_;
   typename T::internal_t cvrdt_;    /// CvRDT state
   typename T::internal_t buffer_;   /// Delta buffer

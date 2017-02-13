@@ -38,7 +38,10 @@ using notify_atom = atom_constant<atom("notify")>;
 using replicator_atom = atom_constant<atom("replicator")>;
 
 /// @private
-using tick_atom = atom_constant<atom("tick")>;
+using tick_buffers_atom = atom_constant<atom("fbuff")>;
+
+/// @private
+using tick_topics_atom = atom_constant<atom("ftopics")>;
 
 /// @private
 using shutdown_atom = atom_constant<atom("shutdown")>;

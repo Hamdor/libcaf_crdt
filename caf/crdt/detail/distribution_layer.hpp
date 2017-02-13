@@ -25,49 +25,26 @@
 
 #include "caf/crdt/uri.hpp"
 
-#include "caf/crdt/types/gmap.hpp"
-
+#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
-
-namespace std {
-
-inline bool operator< (const std::unordered_set<caf::crdt::uri>& lhs,
-                       const std::unordered_set<caf::crdt::uri>& rhs) {
-  return lhs.size() < rhs.size();
-}
-
-template <>
-struct hash<std::pair<int, std::unordered_set<caf::crdt::uri>>> {
-  size_t operator()(const std::pair<int, std::unordered_set<caf::crdt::uri>>& u) const {
-    size_t val = 0;
-    for (auto& e : u.second)
-      val |= hash<caf::crdt::uri>()(e);
-    return val + 73 * u.first;
-  }
-
-};
-
-} // namespace std
 
 namespace caf {
 namespace crdt {
 namespace detail {
 
-/// Manages propagation of updates between nodes. Keeps track which nodes are
-/// intrested in topics.
+///
 struct distribution_layer {
 
-  /// The payload type is used between nodes to propagate intrested topics
-  using payload_type = types::gmap<
-    node_id,
-    std::pair<size_t, std::unordered_set<uri>
-  >>;
+  using tuple_type = std::tuple<size_t, replicator_actor, std::unordered_set<uri>>;
+  using map_type   = std::unordered_map<node_id, tuple_type>;
 
   /// Construct a distribution layer
   template <class ReplicatorImpl>
   distribution_layer(ReplicatorImpl* impl) : impl_{actor_cast<actor>(impl)} {
-    // nop
+    auto tup = std::make_tuple(0, actor_cast<replicator_actor>(impl),
+                               std::unordered_set<uri>{});
+    store_.emplace(impl_->node(), std::move(tup));
   }
 
   /// Add a freshly discovered node
@@ -77,90 +54,95 @@ struct distribution_layer {
     auto query = mm.remote_lookup(replicator_atom::value, nid);
     if (query) {
       auto repl = actor_cast<replicator_actor>(query);
-      replicators_.emplace(nid, repl);
-      send_as(impl_, repl, get_topics_atom::value);
-      // TODO: Send topics and known replicators to new node
+      store_.emplace(nid, std::make_tuple(0, repl, std::unordered_set<uri>{}));
+      send_as(impl_, repl, get_topics_atom::value, size_t{0});
     }
   }
 
   /// A node is no longer reachable, we have to remove it from our lists
   /// @param nid node to remove
   void remove_node(const node_id& nid) {
-    topics_.assign(nid, std::make_pair(0, std::unordered_set<uri>{}));
-    replicators_.erase(nid);
+    store_.erase(nid);
   }
 
-  /// Add a new topic to a node.
-  /// @param nid node which is intrested
-  /// @param topic this node is intrested in
-  void add_topic(const node_id& nid, const uri& topic) {
-    if (nid == impl_->node())
-      if (topics_[nid].second.emplace(topic).second) {
-        topics_[nid].first++;
-        publish(topics_);
-      }
-  }
-
-  /// Remove a topic from a node.
-  /// @param nid related node
-  /// @param topic related topic
-  void remove_topic(const node_id& nid, const uri& topic) {
-    if (nid == impl_->node()) {
-      auto& entry = topics_[nid];
-      if (entry.second.erase(topic)) {
-        topics_[nid].first++;
-        publish(topics_);
-      }
+  /// Update a map entry
+  /// @param nid      regarding node
+  /// @param version  version of set
+  /// @param topics   set of topics
+  void update(const node_id& nid, size_t version,
+              std::unordered_set<uri>&& topics) {
+    auto& tup  = store_[nid];
+    auto& ver  = std::get<0>(tup);
+    auto& set  = std::get<2>(tup);
+    if (version > ver) {
+      set = std::move(topics);
+      ver = version;
     }
   }
 
-  ///
-  void update_topics(const payload_type& p) {
-    for (auto& e : p) {
-      auto& key = e.first;
-      auto& value = e.second;
-      if (topics_[key].first < value.first)
-        topics_[key] = value;
+  /// Locally add a topic
+  void add_topic(const uri& u) {
+    auto& tup = store_[impl_->node()];
+    auto& ver = std::get<0>(tup);
+    ver++;
+    auto& set = std::get<2>(tup);
+    set.emplace(u);
+    // TODO: Evtl. könnte man flushen zu anderen bekannten knoten
+  }
+
+  /// Locally remove a topic
+  void remove_topic(const uri& u) {
+    auto& tup = store_[impl_->node()];
+    auto& ver = std::get<0>(tup);
+    ver++;
+    auto& set = std::get<2>(tup);
+    set.erase(u);
+    // TODO: Evtl. könnte man flushen zu anderen bekannten knoten
+  }
+
+  void pull_topics() {
+    for (auto& entry : store_) {
+      if (entry.first == impl_->node())
+        continue;
+      auto& seen = std::get<0>(entry.second);
+      auto& rep  = std::get<1>(entry.second);
+      send_as(impl_, rep, get_topics_atom::value, seen);
     }
   }
 
-  /// Get topics of a specific node.
-  /// @param nid local or remote node to lookup topics of
-  /// @warning This function only returns the local known view of this node.
-  ///          It is possible, that we do not have full knowledge of all topics
-  ///          of a remote node.
-  std::unordered_set<uri> topics_of(const node_id& nid) const {
-    auto iter = topics_.find(nid);
-    if (iter == topics_.end())
-      return {};
-    return iter->second.second;
+  /// Send topics if we have changed topics
+  /// @param instested_node the node intrested in our topics
+  /// @param seen the last seen version of instrested node
+  void get_topics(const node_id& instested_node, size_t seen) {
+    auto& tup = store_[impl_->node()];
+    if (seen < std::get<0>(tup)) {
+      auto iter = store_.find(instested_node);
+      if (iter == store_.end())
+        return;
+      send_as(impl_, std::get<1>(iter->second), std::get<0>(tup),
+              std::get<2>(tup));
+    }
   }
 
   /// Flush updates to intrested remote nodes.
   /// @param topic of update as uri
   /// @param msg containing the update
   void publish(const uri& topic, const message& msg) const {
-    for (auto& entry : topics_) {
-      auto& set = entry.second.second;
+    for (auto& entry : store_) {
+      if (entry.first == impl_->node())
+        continue;
+      auto& set = std::get<2>(entry.second);
       auto iter = set.find(topic);
       if (iter != set.end()) {
-        auto repl = replicators_.find(entry.first);
-        send_as(impl_, repl->second, topic, msg);
+        auto& repl = std::get<1>(entry.second);
+        send_as(impl_, repl, topic, msg);
       }
     }
   }
 
 private:
-
-  ///
-  void publish(const payload_type& payload) const {
-    for (auto& rep : replicators_)
-      send_as(impl_, rep.second, update_topics_atom::value, payload);
-  }
-
-  types::gmap<node_id, std::pair<size_t, std::unordered_set<uri>>> topics_;
-  std::unordered_map<node_id, replicator_actor> replicators_;
-  actor impl_;
+  map_type store_;
+  actor impl_; // TODO: Villt zu ref machen
 };
 
 } // namespace detail

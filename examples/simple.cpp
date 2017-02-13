@@ -12,7 +12,7 @@ using namespace caf::crdt::types;
 
 namespace {
 
-static uri u = uri{"gcounter<int>://counter"};
+static uri u{"gcounter<int>://counter"};
 
 constexpr int actors  = 10;
 constexpr int to_add  = 4;
@@ -32,7 +32,7 @@ public:
   }
 
   virtual void on_exit() override {
-    system().replicator().unsubscribe<gcounter<int>>(u, this);
+    //system().replicator().unsubscribe<gcounter<int>>(u, this);
     gcounter<int>::base::on_exit();
   }
 

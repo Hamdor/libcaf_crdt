@@ -110,7 +110,7 @@ struct lww_reg_impl {
   /// Apply transaction from a local subscriber to top level replica
   /// @param history a transaction
   /// @return a delta-CRDT which represent the delta
-  lww_reg_impl<T> apply(const transaction_t& history) {
+  lww_reg_impl<T> apply(const transaction_t& history, const node_id&) {
     if (history.operation() != operator_t::set)
       return {};
     if (history.timestamp() > clk_
@@ -174,6 +174,17 @@ public:
   using transaction_t = lww_reg_transaction<T>;
 
   lww_reg_impl() = default;
+  lww_reg_impl(const lww_reg_impl&) = default;
+
+  /// Move assignment, if operations where done, before the state was
+  /// initialized we have to send all done operations to other replicas.
+  lww_reg_impl& operator=(lww_reg_impl&& other) {
+    base_datatype::operator=(std::move(other));
+    if (clk_.time())
+      publish(transaction_t{topic(), owner(), operator_t::set, {clk_.time()},
+              node(), value_});
+    return *this;
+  }
 
   /// Set a element
   /// @param elem element to set
@@ -190,9 +201,7 @@ public:
   const T& get() const { return value_; }
 
   /// Checks if the register contains an equal value
-  bool equal(const T& other) const {
-    return value_ == other;
-  }
+  bool equal(const T& other) const { return value_ == other; }
 
   /// Apply transaction to local CmRDT type
   /// @param history to apply

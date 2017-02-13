@@ -31,8 +31,6 @@
 #include "caf/crdt/types/base_datatype.hpp"
 #include "caf/crdt/types/base_transaction.hpp"
 
-// TODO: Add unit test for this type!
-
 namespace caf {
 namespace crdt {
 namespace types {
@@ -113,7 +111,7 @@ struct gset_impl {
   /// Apply transaction from a local subscriber to top level replica
   /// @param history a transaction
   /// @return a delta-CRDT which represent the delta
-  gset_impl<T> apply(const transaction_t& history) {
+  gset_impl<T> apply(const transaction_t& history, const node_id&) {
     std::set<T> delta;
     if (history.operation() != operator_t::insertion)
       return {std::move(delta)};

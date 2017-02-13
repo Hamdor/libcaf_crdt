@@ -27,6 +27,8 @@
 
 #include "caf/crdt/detail/replica.hpp"
 
+#include "caf/crdt/detail/distribution_layer.hpp"
+
 namespace caf {
 namespace crdt {
 namespace detail {
@@ -38,6 +40,12 @@ struct register_types {
   }
 
   void operator()() noexcept {
+    cfg_.add_message_type<uri>("uri");
+    cfg_.add_message_type<distribution_layer::tuple_type>("dist_tuple");
+    cfg_.add_message_type<distribution_layer::map_type>("dist_map");
+    // ...
+
+    // ...
     cfg_.add_message_type<types::base_datatype>("base_datatype");
     cfg_.add_message_type<uri>("uri");
     cfg_.add_message_type<std::unordered_set<uri>>("unordered_set<uri>");

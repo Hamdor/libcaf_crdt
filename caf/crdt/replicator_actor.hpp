@@ -34,37 +34,26 @@
 namespace caf {
 namespace crdt {
 
-// Forward declaration
-
-namespace types {
-
-template <class Key, class Value> struct gmap;
-
-} // namespace types
-
 /// Interface of replicator
 using replicator_actor = typed_actor<
   /// Topic message pair, where the message contains updates for a topic
   reacts_to<uri, message>,
   /// Internal tick message to flush updates
-  reacts_to<tick_atom>,
+  reacts_to<tick_buffers_atom>,
+  /// Internal tick message to flush topics
+  reacts_to<tick_topics_atom>,
   /// A new connection to a CAF node (node_id) is established
   reacts_to<new_connection_atom, node_id>,
   /// A connection to a CAF node (node_id) is lost
   reacts_to<connection_lost_atom, node_id>,
+
+
+
   /// Return a unordered set of uris to sender
-  replies_to<get_topics_atom>::with<std::unordered_set<uri>>,
+  reacts_to<get_topics_atom, size_t>,
+  reacts_to<size_t, std::unordered_set<uri>>,
 
 
-  /// Adds a topic to senders map
-  reacts_to<add_topic_atom, uri>,
-  /// Removes a topic from senders map
-  reacts_to<remove_topic_atom, uri>,
-
-
-  ///
-  reacts_to<update_topics_atom,
-            types::gmap<node_id, std::pair<size_t, std::unordered_set<uri>>>>,
 
 
   /// Subscribes a actor to a replica topic

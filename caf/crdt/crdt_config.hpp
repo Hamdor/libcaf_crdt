@@ -30,7 +30,6 @@ namespace crdt {
 
 /// Extended `actor_system_config` to support the CRDT module.
 struct crdt_config : public virtual actor_system_config {
-
   crdt_config() : actor_system_config() {
     load<crdt::replicator>();
   }
@@ -38,10 +37,10 @@ struct crdt_config : public virtual actor_system_config {
   /// Adds crdt `Type` to the module
   template <class Type>
   actor_system_config& add_crdt(const std::string& name) {
-    add_message_type<Type>(name);
-    //add_message_type<typename Type::internal_t>(name + "::internal");
+    //add_message_type<Type>(name);
+    add_message_type<typename Type::internal_t>(name + "::internal");
     add_actor_type<crdt::detail::replica<Type>,
-                   const std::string&>(name);
+                   const uri&>(name);
     return *this;
   }
 };

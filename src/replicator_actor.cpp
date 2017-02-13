@@ -57,52 +57,62 @@ struct replicator_actor_impl : public replicator_actor::base {
 
 protected:
   behavior_type make_behavior() override {
-    send(this, tick_atom::value);
+    send(this, tick_buffers_atom::value);
+    send(this, tick_topics_atom::value);
     return {
+
+      // ---
+
       [&](const uri& topic, message& msg) {
-        if(current_sender()->node() == this->node())
+        if(current_sender()->node() == this->node()) {
           updates_.emplace_back(std::make_tuple(topic, std::move(msg)));
-        else {
+        } else {
           auto iter = replicas_.find(topic);
           if (iter != replicas_.end())
             anon_send(iter->second, publish_atom::value, std::move(msg));
         }
       },
-      [&](tick_atom) {
+      [&](tick_buffers_atom) {
         for(auto& update : updates_) {
           auto& topic = std::get<0>(update);
           auto& payload = std::get<1>(update);
           dist.publish(topic, payload);
         }
         updates_.clear();
-        delayed_send(this, std::chrono::milliseconds(250), tick_atom::value);
+        delayed_send(this, std::chrono::milliseconds(250),
+                     tick_buffers_atom::value);
       },
+      [&](tick_topics_atom) {
+        dist.pull_topics();
+        delayed_send(this, std::chrono::milliseconds(250),
+                     tick_topics_atom::value);
+      },
+
+      // ---
+
       [&](new_connection_atom, const node_id& node) {
         dist.add_new_node(node);
       },
       [&](connection_lost_atom, const node_id& nid) {
         dist.remove_node(nid);
       },
-      [&](get_topics_atom) {
-        return dist.topics_of(node());
+      [&](get_topics_atom, size_t seen) {
+        dist.get_topics(current_sender()->node(), seen);
       },
-      [&](add_topic_atom, const uri& topic) {
-        dist.add_topic(current_sender()->node(), topic);
+      [&](size_t version, std::unordered_set<uri>& topics) {
+        dist.update(current_sender()->node(), version, std::move(topics));
       },
-      [&](remove_topic_atom, const uri& topic) {
-        dist.remove_topic(current_sender()->node(), topic);
-      },
-      [&](update_topics_atom, detail::distribution_layer::payload_type& p) {
-        dist.update_topics(std::move(p));
-      },
+
+
+      // --- Subscribe & Unsubscribe
+
       [&](subscribe_atom, const uri& u) {
         auto iter = replicas_.find(u);
         if (iter == replicas_.end()) {
-          auto opt = system().spawn<actor>(u.scheme(),
-                                           make_message(u.to_string()));
+          auto opt = system().spawn<actor>(u.scheme(), make_message(u));
           if (opt) {
             iter = replicas_.emplace(u, *opt).first;
-            dist.add_topic(node(), u);
+            dist.add_topic(u);
           } else
             return; // TODO: Handle error -> error<...>
         }

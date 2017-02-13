@@ -110,7 +110,7 @@ struct gmap_impl {
   /// Apply transaction from local subscriber to top level replica
   /// @param history a transaction
   /// @return a delta-CRDT which represent the delta
-  gmap_impl<Key, Value> apply(const transaction_t& history) {
+  gmap_impl<Key, Value> apply(const transaction_t& history, const node_id&) {
     std::unordered_map<Key, Value> delta;
     if (history.operation() == operator_t::assign) {
       for (auto& pair : history.map()) {
@@ -185,6 +185,16 @@ public:
   /// Mutable operations will trigger this type
   using transaction_t = gmap_transaction<Key, Value>;
 
+  gmap_impl() = default;
+  gmap_impl(const gmap_impl&) = default;
+
+  /*gmap_impl& operator=(gmap_impl&& other) {
+    base_datatype::operator=(std::move(other));
+    if (set_.size())
+      publish(transaction_t{topic(), owner(), operator_t::assign, map_});
+    return *this;
+  }*/
+
   /// Get the value of key
   const Value& at(const Key& key) {
     return map_[key];
@@ -211,11 +221,6 @@ public:
   inline Value& operator[](const Key& key) { return map_[key]; }
 
   inline Value& operator[](Key&& key) { return map_[std::move(key)]; }
-
-  template <class... Ts>
-  std::pair<iterator, bool> emplace(Ts&&... args) {
-    return map_.emplace(std::forward<Ts>(args)...);
-  }
 
   inline iterator begin() { return map_.begin(); }
   inline const_iterator begin() const { return map_.begin(); }

@@ -26,28 +26,32 @@
 
 #include "caf/detail/comparable.hpp"
 
-#include "caf/crdt/detail/uri_impl.hpp"
+namespace {
+
+constexpr char wildcard = '*';
+constexpr char path_delim = '/';
+
+} // namespace <anonymous>
 
 namespace caf {
 namespace crdt {
 
 /// Uri implementation, that supports a scheme and a path.
 class uri : public caf::detail::comparable<uri> {
-  using impl = detail::uri_impl;
 public:
 
   uri() = default;
 
   /// Creates a uri from a string
   /// @param what string that contains a uri
-  uri(const std::string& what) : impl_(impl::from(what)) {
-    // nop
+  uri(const std::string& what) {
+    parse(what);
   }
 
   /// Creates a uri from a C-String
   /// @param what C-String that contains a uri
-  uri(const char* what) : impl_(impl::from(what)) {
-    // nop
+  uri(const char* what) {
+    parse(what);
   }
 
   /// Creates a uri from a path string and a type
@@ -59,20 +63,17 @@ public:
     auto* name = (nr != 0) ? system.types().portable_name(nr, nullptr)
                            : system.types().portable_name(0, &typeid(T));
     std::string divider = ":/";
-    impl_ = impl::from((name ? *name : "<unknown>") + divider + path);
+    from((name ? *name : "<unknown>") + divider + path);
   }
 
-  /// @returns `true` if a valid uri is loaded otherwise `false`.
-  bool valid() const { return impl_->valid(); }
-
   /// @returns the scheme of the uri
-  inline const std::string& scheme() const { return impl_->scheme(); }
+  inline const std::string& scheme() const { return scheme_; }
 
   /// @returns the path of the uri
-  inline const std::string& path() const { return impl_->path(); }
+  inline const std::string& path() const { return path_; }
 
-  /// @returns the complete uri as string
-  inline std::string to_string() const { return impl_->to_string(); }
+
+  inline std::string str() const { return to_string(); }
 
   /// @returns `true` if type is valid in our actor system
   template <class T>
@@ -80,22 +81,76 @@ public:
     auto nr = type_nr<T>::value;
     auto* name = (nr != 0) ? system.types().portable_name(nr, nullptr)
                            : system.types().portable_name(0, &typeid(T));
-    return name != nullptr && std::string{*name} == impl_->scheme();
+    return name != nullptr && std::string{*name} == scheme_;
   }
 
-  // TODO: Fix compare! If members are equal ==> It is the same!
-  intptr_t compare(const uri& other) const noexcept {
-    return impl_.compare(other.impl_);
+  enum class states {
+    parse_scheme,
+    parse_slash,
+    parse_topic,
+    parse_end
+  } state_;
+
+  bool consume(char c) {
+    // -----
+    auto check = [&](const states& next, char assumed) {
+      if (c != assumed)
+        return false;
+      state_ = next;
+      return true;
+    };
+    // -----
+    switch(state_) {
+      case states::parse_scheme:
+        if (c == ':')
+          state_ = states::parse_slash;
+        else
+          scheme_ += c;
+        return true;
+      case states::parse_slash:
+        return check(states::parse_topic, path_delim);
+      case states::parse_topic:
+        path_ += c;
+        if (c == wildcard)
+          state_ = states::parse_end;
+        return true;
+      case states::parse_end:
+        return false;
+    }
+    return false;
   }
+
+  bool parse(const std::string& what) {
+    state_ = states::parse_scheme;
+    for (size_t i = 0; i < what.size(); ++i) {
+      char c = std::tolower(what[i]);
+      if (!consume(c))
+        return false;
+    }
+    return !scheme_.empty() && !path_.empty();
+  }
+
+public:
+
+  inline std::string to_string() const { return scheme_ + ":/" + path_; }
+
+  /// @returns `true` if a valid uri is loaded otherwise `false`.
+  inline bool valid() const { return !path_.empty() && !scheme_.empty(); }
 
   /// @private
   template <class Processor>
   friend void serialize(Processor& proc, uri& x) {
-    proc & *x.impl_;
+    proc & x.path_;
+    proc & x.scheme_;
+  }
+
+  intptr_t compare(const uri& other) const noexcept {
+    return !(path_ == other.path_ && scheme_ == other.scheme_);
   }
 
 private:
-  intrusive_ptr<impl> impl_;
+  std::string path_;
+  std::string scheme_;
 };
 
 } // namespace crdt
