@@ -44,7 +44,7 @@ public:
   }
 
   virtual void on_exit() override {
-    //system().replicator().unsubscribe<types::gcounter<int>>(u, this);
+    system().replicator().unsubscribe<types::gcounter<int>>(u, this);
     types::gcounter<int>::base::on_exit();
   }
 
