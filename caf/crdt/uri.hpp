@@ -26,6 +26,8 @@
 
 #include "caf/detail/comparable.hpp"
 
+#include <cctype>
+
 namespace {
 
 constexpr char wildcard = '*';

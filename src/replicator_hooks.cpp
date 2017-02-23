@@ -20,8 +20,11 @@
 
 #include "caf/crdt/detail/replicator_hooks.hpp"
 
+#include "caf/fwd.hpp"
+
 #include "caf/crdt/replicator.hpp"
 
+using namespace caf;
 using namespace caf::crdt::detail;
 
 replicator_hooks::replicator_hooks(actor_system& sys)

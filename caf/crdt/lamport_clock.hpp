@@ -34,7 +34,7 @@ struct lamport_clock : caf::detail::comparable<lamport_clock>,
   /// @cond PRIVATE
 
   intptr_t compare(uint64_t lhs, uint64_t rhs) const noexcept {
-    return lhs - rhs;
+    return static_cast<intptr_t>(lhs - rhs);
   }
 
   intptr_t compare(const lamport_clock& other) const noexcept {
