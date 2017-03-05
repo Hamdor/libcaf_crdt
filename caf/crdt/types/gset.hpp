@@ -49,15 +49,6 @@ struct gset_transaction : public base_transaction {
   using operation_t = gset_operations;
 
   /// Construct a new transaction
-  gset_transaction(std::string topic, operation_t operation,
-                   std::set<T> values)
-    : base_transaction(std::move(topic)),
-      op_(std::move(operation)),
-      values_(std::move(values)) {
-    // nop
-  }
-
-  /// Construct a new transaction
   gset_transaction(std::string topic, actor owner, operation_t operation,
                    std::set<T> values)
     : base_transaction(std::move(topic), std::move(owner)),
@@ -135,7 +126,7 @@ struct gset_impl {
   /// This is used to convert this delta-CRDT to CmRDT transactions
   transaction_t get_cmrdt_transactions(const std::string& topic) const {
     // For this type its simple again, we just have to copy the set
-    return {topic, operator_t::insertion, set_};
+    return {topic, {}, operator_t::insertion, set_};
   }
 
   /// @returns `true` if the state is empty

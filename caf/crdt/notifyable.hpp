@@ -18,8 +18,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_CRDT_INTERFACES_HPP
-#define CAF_CRDT_INTERFACES_HPP
+#ifndef CAF_CRDT_NOTIFYABLE_HPP
+#define CAF_CRDT_NOTIFYABLE_HPP
 
 #include "caf/typed_actor.hpp"
 
@@ -39,4 +39,4 @@ using notifyable = typed_actor<
 } // namespace crdt
 } // namespace caf
 
-#endif // CAF_CRDT_INTERFACES_HPP
+#endif // CAF_CRDT_NOTIFYABLE_HPP

@@ -33,10 +33,11 @@ namespace caf {
 namespace crdt {
 namespace detail {
 
-///
+/// Manages the data send between nodes.
 struct distribution_layer {
 
-  using tuple_type = std::tuple<size_t, replicator_actor, std::unordered_set<uri>>;
+  using tuple_type = std::tuple<size_t, replicator_actor,
+                                std::unordered_set<uri>>;
   using map_type   = std::unordered_map<node_id, tuple_type>;
 
   /// Construct a distribution layer
@@ -80,26 +81,20 @@ struct distribution_layer {
     }
   }
 
-  /// Locally add a topic
+  /// Locally add a topic, this is called, when a new replica<T> is spawned
+  /// @param u uri to add
   void add_topic(const uri& u) {
-    auto& tup = store_[impl_->node()];
-    auto& ver = std::get<0>(tup);
-    ver++;
-    auto& set = std::get<2>(tup);
-    set.emplace(u);
-    // TODO: Evtl. könnte man flushen zu anderen bekannten knoten
+    modify_topics(u, false);
   }
 
   /// Locally remove a topic
+  /// @param u uri to remove
   void remove_topic(const uri& u) {
-    auto& tup = store_[impl_->node()];
-    auto& ver = std::get<0>(tup);
-    ver++;
-    auto& set = std::get<2>(tup);
-    set.erase(u);
-    // TODO: Evtl. könnte man flushen zu anderen bekannten knoten
+    modify_topics(u, true);
   }
 
+  /// Send the last seen version of a node to the node, if there
+  /// is a newer version, the node will respond with its updated data.
   void pull_topics() {
     for (auto& entry : store_) {
       if (entry.first == impl_->node())
@@ -110,7 +105,9 @@ struct distribution_layer {
     }
   }
 
-  /// Send topics if we have changed topics
+  /// A node has asked us to respond with our topics, if the version has
+  /// changed. Seen is the last seen version by the sender, if we have a newer
+  /// version, just respond to intrested node with our actual entry.
   /// @param instested_node the node intrested in our topics
   /// @param seen the last seen version of instrested node
   void get_topics(const node_id& instested_node, size_t seen) {
@@ -141,8 +138,19 @@ struct distribution_layer {
   }
 
 private:
+
+  inline void modify_topics(const uri& u, bool erase) {
+    auto& tup = store_[impl_->node()];
+    auto& ver = std::get<0>(tup);
+    ver++;
+    auto& set = std::get<2>(tup);
+    if (erase) set.erase(u);
+    else       set.emplace(u);
+    // TODO: Evtl. könnte man flushen zu anderen bekannten knoten
+  }
+
   map_type store_;
-  actor impl_; // TODO: Villt zu ref machen
+  actor impl_;
 };
 
 } // namespace detail

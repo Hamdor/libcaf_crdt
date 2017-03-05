@@ -100,7 +100,7 @@ void caf_main(actor_system& system, const config& cfg) {
    system.spawn<incrementer>();
    system2.spawn<incrementer>();
   }
-  std::this_thread::sleep_for(std::chrono::seconds(5));
+  //std::this_thread::sleep_for(std::chrono::seconds(5));
 }
 
 } // namespace <anonymous>
