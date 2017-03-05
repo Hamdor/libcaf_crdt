@@ -26,12 +26,11 @@
 #include "caf/crdt/lamport_clock.hpp"
 
 #include "caf/crdt/types/base_datatype.hpp"
-#include "caf/crdt/types/base_transaction.hpp"
 
 // TODO: Add unit test for this type!
 // TODO: Reduce this implementation,
 //       for this type it is possible to use just one class
-
+/*
 namespace caf {
 namespace crdt {
 namespace types {
@@ -247,6 +246,6 @@ struct lww_reg : public cmrdt::lww_reg_impl<T>,
 
 } // namespace types
 } // namespace crdt
-} // namespace caf
+} // namespace caf*/
 
 #endif // CAF_CRDT_TYPES_LWW_REGISTER_HPP

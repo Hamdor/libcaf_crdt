@@ -29,9 +29,7 @@ namespace {
 
 constexpr int nr_spawn = 5;
 constexpr int inc_by   = 10;
-constexpr int expected = nr_spawn * inc_by;
-
-static uri u = uri{"gcounter<int>://counter"};
+constexpr int expected = nr_spawn * inc_by *2;
 
 struct port_dummy : public event_based_actor {
   using event_based_actor::event_based_actor;
@@ -39,24 +37,18 @@ struct port_dummy : public event_based_actor {
 
 class incrementer : public types::gcounter<int>::base {
 public:
-  incrementer(actor_config& cfg) : types::gcounter<int>::base(cfg) {
-    system().replicator().subscribe<types::gcounter<int>>(u, this);
-  }
-
-  virtual void on_exit() override {
-    system().replicator().unsubscribe<types::gcounter<int>>(u, this);
-    types::gcounter<int>::base::on_exit();
+  incrementer(actor_config& cfg)
+    : types::gcounter<int>::base(cfg),
+      state_(this, "gcounter<int>://counter") {
+    // nop
   }
 
 protected:
   typename types::gcounter<int>::behavior_type make_behavior() override {
+    state_.increment_by(inc_by);
     return {
-      [&](initial_atom, types::gcounter<int>& state) {
-        state_ = std::move(state);
-        state_ += inc_by;
-      },
-      [&](notify_atom, const types::gcounter<int>::transaction_t& t) {
-        state_.apply(t);
+      [&](notify_atom, const types::gcounter<int>& t) {
+        state_.merge(t);
         if (state_.count() == expected) {
           aout(this) << "Count is: " << state_.count() << " ==> quit()\n";
           quit();
@@ -100,7 +92,6 @@ void caf_main(actor_system& system, const config& cfg) {
    system.spawn<incrementer>();
    system2.spawn<incrementer>();
   }
-  //std::this_thread::sleep_for(std::chrono::seconds(5));
 }
 
 } // namespace <anonymous>

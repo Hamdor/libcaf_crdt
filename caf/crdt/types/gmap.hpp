@@ -22,10 +22,9 @@
 #define CAF_CRDT_TYPES_GMAP_HPP
 
 #include "caf/crdt/types/base_datatype.hpp"
-#include "caf/crdt/types/base_transaction.hpp"
 
 #include <map>
-
+/*
 namespace caf {
 namespace crdt {
 namespace types {
@@ -188,13 +187,6 @@ public:
   gmap_impl() = default;
   gmap_impl(const gmap_impl&) = default;
 
-  /*gmap_impl& operator=(gmap_impl&& other) {
-    base_datatype::operator=(std::move(other));
-    if (set_.size())
-      publish(transaction_t{topic(), owner(), operator_t::assign, map_});
-    return *this;
-  }*/
-
   /// Get the value of key
   const Value& at(const Key& key) {
     return map_[key];
@@ -261,5 +253,5 @@ struct gmap : public cmrdt::gmap_impl<Key, Value> {
 } // namespace types
 } // namespace crdt
 } // namespace caf
-
+*/
 #endif // CAF_CRDT_TYPES_GMAP_HPP

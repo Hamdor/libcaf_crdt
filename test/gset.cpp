@@ -24,7 +24,7 @@
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
 #include "caf/crdt/all.hpp"
-
+/*
 using namespace caf;
 using namespace caf::crdt;
 
@@ -163,4 +163,4 @@ CAF_TEST(move2) {
 // Tests the initialization process of crdt instances
 CAF_TEST(move3) {
   test_init({},{1},{1});
-}
+}*/

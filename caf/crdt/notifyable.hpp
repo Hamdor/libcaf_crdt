@@ -32,8 +32,7 @@ namespace crdt {
 /// notifications.
 template <class State>
 using notifyable = typed_actor<
-  reacts_to<initial_atom, State>,
-  reacts_to<notify_atom, typename State::transaction_t>
+  reacts_to<notify_atom, State>
 >;
 
 } // namespace crdt

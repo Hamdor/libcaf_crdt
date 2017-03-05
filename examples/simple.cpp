@@ -2,9 +2,6 @@
 #include "caf/io/all.hpp"
 #include "caf/crdt/all.hpp"
 
-#include <unordered_set>
-#include <iostream>
-
 using namespace caf;
 using namespace caf::io;
 using namespace caf::crdt;
@@ -12,52 +9,38 @@ using namespace caf::crdt::types;
 
 namespace {
 
-static uri u{"gcounter<int>://counter"};
-
-constexpr int actors  = 10;
-constexpr int to_add  = 4;
-constexpr int assumed = actors * to_add;
+constexpr size_t assumed_entries = 4;
 
 class config : public crdt_config {
 public:
   config() {
-    add_crdt<types::gcounter<int>>("gcounter<int>");
+    add_crdt<types::gset<int>>("gset<int>");
   }
 };
 
-class incrementer : public gcounter<int>::base {
-public:
-  incrementer(actor_config& cfg) : gcounter<int>::base(cfg) {
-    system().replicator().subscribe<gcounter<int>>(u, this);
-  }
-
-  virtual void on_exit() override {
-    //system().replicator().unsubscribe<gcounter<int>>(u, this);
-    gcounter<int>::base::on_exit();
-  }
-
-protected:
-  typename gcounter<int>::behavior_type make_behavior() override {
-    return {
-      [&](initial_atom, gcounter<int>& state) {
-        state_ = std::move(state);
-        state_ += to_add;
-      },
-      [&](notify_atom, const typename gcounter<int>::transaction_t& t) {
-        state_.apply(t);
-        if (state_.count() == assumed)
-          quit();
-      }
-    };
-  }
-
-private:
-  gcounter<int> state_;
-};
+void actor_fun(event_based_actor* self) {
+  // Initialize state
+  auto state_ = std::make_shared<gset<int>>(self, "gset<int>://set");
+  self->become(
+    [=](int value) {
+      state_->insert(value);
+    },
+    [=](notify_atom, const gset<int>& other) {
+      state_->merge(other);
+      if (state_->size() == assumed_entries)
+        self->quit();
+    }
+  );
+}
 
 void caf_main(actor_system& system, const config&) {
-  for (int i = 0; i < actors; ++i)
-    system.spawn<incrementer>();
+  auto a1 = system.spawn(actor_fun);
+  auto a2 = system.spawn(actor_fun);
+  auto a3 = system.spawn(actor_fun);
+  anon_send(a1, int{1});
+  anon_send(a2, int{2});
+  anon_send(a3, int{3});
+  anon_send(a3, int{4});
 }
 
 } // namespace <anonymous>

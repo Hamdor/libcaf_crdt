@@ -38,24 +38,20 @@ namespace crdt {
 using replicator_actor = typed_actor<
   /// Topic message pair, where the message contains updates for a topic
   reacts_to<uri, message>,
-  /// Internal tick message to flush updates
-  reacts_to<tick_buffers_atom>,
+  /// Internal tick message to send complete state, this messages starts the
+  /// local collection process of all states.
+  reacts_to<tick_state_atom>,
+  /// Response to `copy_atom`, the message contains the full state of the replic
+  reacts_to<copy_ack_atom, uri, message>,
   /// Internal tick message to flush topics
   reacts_to<tick_topics_atom>,
   /// A new connection to a CAF node (node_id) is established
   reacts_to<new_connection_atom, node_id>,
   /// A connection to a CAF node (node_id) is lost
   reacts_to<connection_lost_atom, node_id>,
-
-
-
   /// Return a unordered set of uris to sender
   reacts_to<get_topics_atom, size_t>,
   reacts_to<size_t, std::unordered_set<uri>>,
-
-
-
-
   /// Subscribes a actor to a replica topic
   reacts_to<subscribe_atom, uri>,
   /// Unsubscribes a actor from a replica topic

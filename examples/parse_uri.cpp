@@ -17,7 +17,7 @@
  * http://opensource.org/licenses/BSD-3-Clause and                            *
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
-
+/*
 #include "caf/all.hpp"
 
 #include "caf/crdt/all.hpp"
@@ -61,4 +61,9 @@ int main() {
             << u.match_rtti<types::gset<int>>(system) << ", "
             << u.match_rtti<types::gset<float>>(system) << std::endl;
   return 0;
+}
+*/
+
+int main() {
+
 }

@@ -37,8 +37,7 @@ struct crdt_config : public virtual actor_system_config {
   /// Adds crdt `Type` to the module
   template <class Type>
   actor_system_config& add_crdt(const std::string& name) {
-    //add_message_type<Type>(name);
-    add_message_type<typename Type::internal_t>(name + "::internal");
+    add_message_type<Type>(name);
     add_actor_type<crdt::detail::replica<Type>,
                    const uri&>(name);
     return *this;

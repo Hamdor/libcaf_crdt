@@ -39,65 +39,46 @@ template <class T>
 class replica : public event_based_actor {
 public:
   replica(actor_config& cfg, const uri& topic)
-      : event_based_actor(cfg), topic_{std::move(topic)} {
+      : event_based_actor(cfg), topic_{topic} {
     // nop
   }
 
 protected:
-  behavior make_behavior() override {
-    this->send(this, tick_atom::value);
+  virtual behavior make_behavior() override {
     return {
       [&](publish_atom, message& msg) {
-        typename T::internal_t delta;
-        auto unpack = [&](typename T::internal_t& unpacked) {
-          delta = std::move(unpacked);
-        };
-        msg.apply(unpack);
+        T unpacked;
+        msg.apply([&](T& t) {
+          unpacked = std::move(t);
+        });
+        auto delta = cvrdt_.merge(unpacked);
         if (delta.empty())
-          return;
-        delta = cvrdt_.merge(delta);
-        if (delta.empty())
-          return;
-        auto ops = delta.get_cmrdt_transactions(topic_.str());
-        for (auto& subs : subscribers_)
-          this->send(subs, notify_atom::value, ops);
+          return; // State was already included
+        for (auto& sub : subs_)
+          if (sub != current_sender())
+            send(sub, notify_atom::value, unpacked);
       },
-      [&](publish_atom, const typename T::transaction_t& transaction) {
-        auto delta = cvrdt_.apply(transaction, this->node());
-        if (delta.empty())
-          return;
-        buffer_.merge(delta);
-        for (auto& sub : subscribers_)
-          if (sub != this->current_sender())
-            this->send(sub, notify_atom::value, transaction);
+      [&](subscribe_atom) {
+        auto handle = actor_cast<actor>(current_sender());
+        subs_.emplace(handle);
+        // Send current full state to subscriber
+        if (!cvrdt_.empty())
+          send(handle, notify_atom::value, cvrdt_);
       },
-      [&](subscribe_atom, const actor& subscriber) {
-        subscribers_.emplace(subscriber);
-        T state;
-        state.apply(cvrdt_.get_cmrdt_transactions(topic_.str()));
-        state.set_owner(subscriber);
-        state.set_parent(this);
-        state.set_topic(topic_.str());
-        this->send(subscriber, initial_atom::value, std::move(state));
+      [&](unsubscribe_atom) {
+        subs_.erase(actor_cast<actor>(current_sender()));
       },
-      [&](unsubscribe_atom, const actor& subscriber) {
-        subscribers_.erase(subscriber);
-      },
-      [&](tick_atom) {
-        this->send(this->home_system().replicator().actor_handle(), topic_,
-                   make_message(count_++ % 10 ? cvrdt_ : buffer_));
-        this->delayed_send(this, std::chrono::seconds(1), tick_atom::value);
-        buffer_.clear();
+      [&](copy_atom) {
+        send(system().replicator().actor_handle(),
+             copy_ack_atom::value, topic_, make_message(cvrdt_));
       }
     };
   }
 
 private:
-  size_t count_;
-  uri topic_;
-  typename T::internal_t cvrdt_;    /// CvRDT state
-  typename T::internal_t buffer_;   /// Delta buffer
-  std::unordered_set<actor> subscribers_;
+  T cvrdt_;                        /// CRDT State (complete state)
+  uri topic_;                      /// Topic
+  std::unordered_set<actor> subs_; /// Subscribers
 };
 
 } // namespace detail

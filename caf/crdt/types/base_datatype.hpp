@@ -34,56 +34,50 @@ namespace crdt {
 namespace types {
 
 ///
-class base_datatype {
-public:
-  /// Default constructor
+struct base_datatype {
+  /// @private
   base_datatype() = default;
 
   ///
-  base_datatype(actor owner, actor parent, std::string topic)
-      : owner_(std::move(owner)), parent_(std::move(parent)),
-        topic_(std::move(topic)) {
-    // nop
+  template <class ActorType>
+  base_datatype(const ActorType& owner, const std::string& topic)
+    : owner_(actor_cast<actor>(owner)), topic_(topic) {
+    auto hdl = owner_.home_system().replicator().actor_handle();
+    send_as(owner_, hdl, subscribe_atom::value, uri{topic});
+  }
+
+  virtual ~base_datatype() {
+    // If owner_ is no longer valid, the actor system got shut down and it is
+    // no longer possible nor necessary to unsubscribe
+    if (owner_) {
+      auto hdl = owner_.home_system().replicator().actor_handle();
+      send_as(owner_, hdl, unsubscribe_atom::value, uri{topic_});
+    }
   }
 
   /// @returns topic of this state
-  inline const std::string& topic() const { return topic_; }
+  inline std::string topic() const { return topic_.str(); }
 
-  /// @returns owning actor
+  /// @returns the owner of this state
   inline const actor& owner() const { return owner_; }
-
-  /// @returns local node
-  inline node_id node() const { return /*owner_ ?*/ owner_.node() /*: node_id{}*/; }
-
-  /// @private
-  inline void set_owner(actor act) { owner_ = std::move(act); }
-
-  /// @private
-  inline void set_parent(actor act) { parent_ = std::move(act); }
-
-  /// @private
-  inline void set_topic(std::string topic) { topic_ = std::move(topic); }
 
   /// @private
   template <class Processor>
   friend void serialize(Processor& proc, base_datatype& x) {
-    proc & x.owner_;
-    proc & x.parent_;
     proc & x.topic_;
   }
 
 protected:
-
-  /// Propagate transaction to our parent
+  ///
   template <class Data>
   void publish(const Data& data) const {
-    send_as(owner_, parent_, publish_atom::value, data);
+    auto hdl = owner_.home_system().replicator().actor_handle();
+    send_as(owner_, hdl, topic_, make_message(data));
   }
 
 private:
-  actor owner_; /// Owning actor of this state
-  actor parent_; /// Parent of owning actor
-  std::string topic_; /// Topic for this datatype
+  actor owner_; /// Owner of this state
+  uri topic_;   /// Topic for this datatype
 };
 
 } // namespace types

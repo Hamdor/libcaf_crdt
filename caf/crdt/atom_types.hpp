@@ -38,7 +38,7 @@ using notify_atom = atom_constant<atom("notify")>;
 using replicator_atom = atom_constant<atom("replicator")>;
 
 /// @private
-using tick_buffers_atom = atom_constant<atom("fbuff")>;
+using tick_state_atom = atom_constant<atom("fstate")>;
 
 /// @private
 using tick_topics_atom = atom_constant<atom("ftopics")>;
@@ -47,6 +47,15 @@ using tick_topics_atom = atom_constant<atom("ftopics")>;
 using shutdown_atom = atom_constant<atom("shutdown")>;
 
 // -------- Replicator communication atoms -------------------------------------
+
+/// @private
+using copy_atom = atom_constant<atom("copyatom")>;
+
+/// @private
+using copy_ack_atom = atom_constant<atom("copyack")>;
+
+/// @private
+using new_state = atom_constant<atom("newstate")>;
 
 /// @private
 using new_connection_atom = atom_constant<atom("newcon")>;

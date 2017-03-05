@@ -45,51 +45,37 @@ struct replicator_actor_impl : public replicator_actor::base {
     // nop
   }
 
-  virtual ~replicator_actor_impl() {
-    for (auto& r : replicas_)
-      anon_send_exit(r.second, exit_reason::user_shutdown);
-    replicas_.clear();
-  }
-
   const char* name() const override {
     return "replicator_actor";
   }
 
 protected:
   behavior_type make_behavior() override {
-    send(this, tick_buffers_atom::value);
+    send(this, tick_state_atom::value);
     send(this, tick_topics_atom::value);
     return {
-
       // ---
-
-      [&](const uri& topic, message& msg) {
-        if(current_sender()->node() == this->node()) {
-          updates_.emplace_back(std::make_tuple(topic, std::move(msg)));
-        } else {
-          auto iter = replicas_.find(topic);
-          if (iter != replicas_.end())
-            anon_send(iter->second, publish_atom::value, std::move(msg));
-        }
+      [&](uri& topic, const message& msg) {
+        if (current_sender()->node() == this->node())
+          dist.publish(topic, msg); // Remote send message
+        delegate(find_actor(topic), publish_atom::value, msg);
       },
-      [&](tick_buffers_atom) {
-        for(auto& update : updates_) {
-          auto& topic = std::get<0>(update);
-          auto& payload = std::get<1>(update);
-          dist.publish(topic, payload);
-        }
-        updates_.clear();
+      [&](tick_state_atom) {
+        // All states have to send their state to the replicator
+        for (auto& state : states_)
+          anon_send(state.second, copy_atom::value);
         delayed_send(this, std::chrono::milliseconds(250),
-                     tick_buffers_atom::value);
+                     tick_state_atom::value);
+      },
+      [&](copy_ack_atom, const uri& u, const message& msg) {
+        dist.publish(u, msg);
       },
       [&](tick_topics_atom) {
         dist.pull_topics();
         delayed_send(this, std::chrono::milliseconds(250),
                      tick_topics_atom::value);
       },
-
       // ---
-
       [&](new_connection_atom, const node_id& node) {
         dist.add_new_node(node);
       },
@@ -102,38 +88,28 @@ protected:
       [&](size_t version, std::unordered_set<uri>& topics) {
         dist.update(current_sender()->node(), version, std::move(topics));
       },
-
-
       // --- Subscribe & Unsubscribe
-
       [&](subscribe_atom, const uri& u) {
-        auto iter = replicas_.find(u);
-        if (iter == replicas_.end()) {
-          auto opt = system().spawn<actor>(u.scheme(), make_message(u));
-          if (opt) {
-            iter = replicas_.emplace(u, *opt).first;
-            dist.add_topic(u);
-          } else
-            return; // TODO: Handle error -> error<...>
-        }
-        anon_send(iter->second, subscribe_atom::value,
-                  actor_cast<actor>(current_sender()));
+        delegate(find_actor(u), subscribe_atom::value);
       },
       [&](unsubscribe_atom, const uri& u) {
-        auto iter = replicas_.find(u);
-        if (iter == replicas_.end())
-          return;
-        anon_send(iter->second, unsubscribe_atom::value,
-                  actor_cast<actor>(current_sender()));
+        delegate(find_actor(u), unsubscribe_atom::value);
       }
     };
   }
 
 private:
-  /// Update buffer
-  std::vector<std::tuple<uri, message>> updates_;
-  /// Map of local replicas
-  std::unordered_map<uri, actor> replicas_;
+
+  actor find_actor(const uri& u) {
+    auto iter = states_.find(u);
+    if (iter == states_.end()) {
+      auto opt = system().spawn<actor>(u.scheme(), make_message(u));
+      iter = states_.emplace(u, *opt).first;
+    }
+    return iter->second;
+  }
+  ///
+  std::unordered_map<uri, actor> states_;
   /// Organize distribution of updates
   detail::distribution_layer dist;
 };
