@@ -55,7 +55,19 @@ using replicator_actor = typed_actor<
   /// Subscribes a actor to a replica topic
   reacts_to<subscribe_atom, uri>,
   /// Unsubscribes a actor from a replica topic
-  reacts_to<unsubscribe_atom, uri>
+  reacts_to<unsubscribe_atom, uri>,
+  /// Reads the value from all nodes
+  reacts_to<read_all_atom, uri>,
+  /// Reads the value from a majority of nodes
+  reacts_to<read_majority_atom, uri>,
+  /// Reads only the local value
+  reacts_to<read_local_atom, uri>,
+  /// Writes to all nodes
+  reacts_to<write_all_atom, uri, message>,
+  /// Writes to a majority of nodes
+  reacts_to<write_majority_atom, uri, message>,
+  /// Writes only to local node
+  reacts_to<write_local_atom, uri, message>
 >;
 
 ///@relates replicator_actor

@@ -71,6 +71,8 @@ protected:
   ///
   template <class Data>
   void publish(const Data& data) const {
+    if (!owner_)
+      return;
     auto hdl = owner_.home_system().replicator().actor_handle();
     send_as(owner_, hdl, topic_, make_message(data));
   }

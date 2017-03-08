@@ -83,8 +83,6 @@ struct gcounter : public base_datatype {
   /// @returns a delta gcounter<T>
   gcounter<T> merge(const gcounter<T>& other) {
     std::unordered_map<actor, T> delta;
-    // TODO: Loop over this map and compare to other for missing/smaller values?
-    //       Should they be included in the delta?
     for (auto& elem : other.map_) {
       auto key = elem.first;
       if (map_[key] < elem.second) {

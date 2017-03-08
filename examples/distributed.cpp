@@ -29,7 +29,8 @@ namespace {
 
 constexpr int nr_spawn = 5;
 constexpr int inc_by   = 10;
-constexpr int expected = nr_spawn * inc_by *2;
+constexpr int number_of_nodes = 2;
+constexpr int expected = nr_spawn * inc_by * number_of_nodes;
 
 struct port_dummy : public event_based_actor {
   using event_based_actor::event_based_actor;
@@ -68,7 +69,7 @@ public:
   }
 };
 
-void caf_main(actor_system& system, const config& cfg) {
+void caf_main(actor_system& system, const config&) {
   config conf{};
   conf.load<io::middleman>().load<crdt::replicator>();
   actor_system system2{conf};
@@ -89,8 +90,8 @@ void caf_main(actor_system& system, const config& cfg) {
   std::this_thread::sleep_for(std::chrono::seconds(1));
   // ----------------------
   for (int i = 0; i < nr_spawn; ++i) {
-   system.spawn<incrementer>();
-   system2.spawn<incrementer>();
+    system.spawn<incrementer>();
+    system2.spawn<incrementer>();
   }
 }
 

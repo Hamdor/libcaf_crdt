@@ -137,6 +137,19 @@ struct distribution_layer {
     }
   }
 
+  std::set<replicator_actor> get_intrested(const uri& topic) const {
+    std::set<replicator_actor> result;
+    for (auto& entry : store_) {
+      if (entry.first == impl_->node())
+        continue;
+      auto& set = std::get<2>(entry.second);
+      auto iter = set.find(topic);
+      if (iter != set.end())
+        result.emplace(std::get<1>(entry.second));
+    }
+    return result;
+  }
+
 private:
 
   inline void modify_topics(const uri& u, bool erase) {
@@ -146,7 +159,6 @@ private:
     auto& set = std::get<2>(tup);
     if (erase) set.erase(u);
     else       set.emplace(u);
-    // TODO: Evtl. könnte man flushen zu anderen bekannten knoten
   }
 
   map_type store_;

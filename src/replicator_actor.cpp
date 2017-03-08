@@ -64,15 +64,14 @@ protected:
         // All states have to send their state to the replicator
         for (auto& state : states_)
           anon_send(state.second, copy_atom::value);
-        delayed_send(this, std::chrono::milliseconds(250),
-                     tick_state_atom::value);
+        delayed_send(this, std::chrono::seconds(1), tick_state_atom::value);
       },
       [&](copy_ack_atom, const uri& u, const message& msg) {
         dist.publish(u, msg);
       },
       [&](tick_topics_atom) {
         dist.pull_topics();
-        delayed_send(this, std::chrono::milliseconds(250),
+        delayed_send(this, std::chrono::seconds(1),
                      tick_topics_atom::value);
       },
       // ---
@@ -94,6 +93,28 @@ protected:
       },
       [&](unsubscribe_atom, const uri& u) {
         delegate(find_actor(u), unsubscribe_atom::value);
+      },
+      // -- Read & Write Consistencies
+      [&](read_all_atom, const uri& u) {
+        delegate(find_actor(u), read_all_atom::value, u, dist.get_intrested(u));
+      },
+      [&](read_majority_atom, const uri& u) {
+        delegate(find_actor(u), read_majority_atom::value, u,
+                 dist.get_intrested(u));
+      },
+      [&](read_local_atom, const uri& u) {
+        delegate(find_actor(u), read_local_atom::value);
+      },
+      [&](write_all_atom, const uri& u, const message& msg) {
+        delegate(find_actor(u), write_all_atom::value, u,
+                 dist.get_intrested(u), msg);
+      },
+      [&](write_majority_atom, const uri& u, const message& msg) {
+        delegate(find_actor(u), write_majority_atom::value, u,
+                 dist.get_intrested(u), msg);
+      },
+      [&](write_local_atom, const uri& u, const message& msg) {
+        delegate(find_actor(u), write_local_atom::value, msg);
       }
     };
   }
@@ -105,6 +126,7 @@ private:
     if (iter == states_.end()) {
       auto opt = system().spawn<actor>(u.scheme(), make_message(u));
       iter = states_.emplace(u, *opt).first;
+      dist.add_topic(u);
     }
     return iter->second;
   }

@@ -26,11 +26,40 @@
 namespace caf {
 namespace crdt {
 
-/// Initial atom is recieved after subscribe to a replica
-using initial_atom = atom_constant<atom("init")>;
+// -------- Public usable atoms ------------------------------------------------
 
 /// Send to subscribed actors when a replica has changed
 using notify_atom = atom_constant<atom("notify")>;
+
+/// Send to replicator to read states from a majority of nodes
+using read_majority_atom = atom_constant<atom("readmajor")>;
+
+/// Send to replicator to read states from all nodes
+using read_all_atom = atom_constant<atom("readall")>;
+
+/// Send to replicator to read only local nodes state
+using read_local_atom = atom_constant<atom("readlocal")>;
+
+/// Send to replicator to write to a majority of nodes
+using write_majority_atom = atom_constant<atom("writemajor")>;
+
+/// Send to replicator to write to all nodes
+using write_all_atom = atom_constant<atom("writeall")>;
+
+/// Send to replicator to write to local node
+using write_local_atom = atom_constant<atom("writelocal")>;
+
+/// Send back if write succeed
+using write_succeed_atom = atom_constant<atom("wsuccceed")>;
+
+/// Send back if read succeed
+using read_succeed_atom = atom_constant<atom("rsucceed")>;
+
+/// Send back if write failed
+using write_failed_atom = atom_constant<atom("wfailed")>;
+
+/// Send back if read failed
+using read_failed_atom = atom_constant<atom("rfailed")>;
 
 // -------- Internal atoms -----------------------------------------------------
 
@@ -55,9 +84,6 @@ using copy_atom = atom_constant<atom("copyatom")>;
 using copy_ack_atom = atom_constant<atom("copyack")>;
 
 /// @private
-using new_state = atom_constant<atom("newstate")>;
-
-/// @private
 using new_connection_atom = atom_constant<atom("newcon")>;
 
 /// @private
@@ -67,16 +93,7 @@ using connection_lost_atom = atom_constant<atom("conlost")>;
 using get_topics_atom = atom_constant<atom("gettopics")>;
 
 /// @private
-using add_topic_atom = atom_constant<atom("addtopic")>;
-
-/// @private
-using remove_topic_atom = atom_constant<atom("remtopic")>;
-
-/// @private
-using update_topics_atom = atom_constant<atom("updatetopi")>;
-
-/// @private
-using create_replica_atom = atom_constant<atom("makerepl")>;
+using delete_topic_atom = atom_constant<atom("deltopic")>;
 
 } // namespace crdt
 } // namespace caf
