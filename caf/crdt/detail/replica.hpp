@@ -52,9 +52,6 @@ behavior writer(stateful_actor<wr_state<T>>* self) {
     self->state.messages_left = msgs_left;
     self->state.respond_to = respond;
     self->state.rp = self->make_response_promise();
-    if (msgs_left == 0) // This is possible, if write_all was called,
-                        // but only one node is known
-      self->state.rp.deliver(write_succeed_atom::value);
   };
   return {
     [=](write_all_atom, const uri& u, std::set<replicator_actor> to,
@@ -87,7 +84,7 @@ behavior reader(stateful_actor<wr_state<T>>* self) {
   auto init = [=](size_t msgs_left, actor respond) {
     self->state.messages_left = msgs_left;
     self->state.respond_to = respond;
-    self->state.rp = self->make_response_promise();;
+    self->state.rp = self->make_response_promise();
   };
   return {
     [=](read_all_atom, const uri& u, std::set<replicator_actor> from) {
@@ -158,6 +155,7 @@ protected:
                  std::move(from));
       },
       [&](read_majority_atom, const uri& u, std::set<replicator_actor> from) {
+        from.emplace(this->system().replicator().actor_handle());
         delegate(this->spawn(reader<T>), read_majority_atom::value, u,
                  std::move(from));
       },
@@ -166,13 +164,13 @@ protected:
       },
       [&](write_all_atom, const uri& u, std::set<replicator_actor> to,
           const message& msg) {
-        send(this, publish_atom::value, msg);
+        to.emplace(this->system().replicator().actor_handle());
         delegate(this->spawn(writer<T>), write_all_atom::value, u, std::move(to),
                  msg);
       },
       [&](write_majority_atom, const uri& u, std::set<replicator_actor> to,
           const message& msg) {
-        send(this, publish_atom::value, msg);
+        to.emplace(this->system().replicator().actor_handle());
         delegate(this->spawn(writer<T>), write_majority_atom::value, u,
                  std::move(to), msg);
       },
