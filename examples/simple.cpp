@@ -10,6 +10,7 @@ using namespace caf::crdt::types;
 namespace {
 
 constexpr size_t assumed_entries = 4;
+constexpr size_t to_spawn        = 4;
 
 class config : public crdt_config {
 public:
@@ -27,20 +28,20 @@ void actor_fun(event_based_actor* self) {
     },
     [=](notify_atom, const gset<int>& other) {
       state_->merge(other);
-      if (state_->size() == assumed_entries)
+      if (state_->size() == assumed_entries) {
         self->quit();
+        aout(self) << "got all entries... exiting...\n";
+      }
     }
   );
 }
 
 void caf_main(actor_system& system, const config&) {
-  auto a1 = system.spawn(actor_fun);
-  auto a2 = system.spawn(actor_fun);
-  auto a3 = system.spawn(actor_fun);
-  anon_send(a1, int{1});
-  anon_send(a2, int{2});
-  anon_send(a3, int{3});
-  anon_send(a3, int{4});
+  std::vector<int> v(to_spawn);
+  int val = 0;
+  std::generate(v.begin(), v.end(), [&] { return val++; });
+  for (size_t i = 0; i < to_spawn; ++i)
+    anon_send(system.spawn(actor_fun), v[i]);
 }
 
 } // namespace <anonymous>
