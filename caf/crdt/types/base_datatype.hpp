@@ -18,77 +18,72 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_CRDT_BASE_DATATYPE_HPP
-#define CAF_REPLICATION_CRDT_BASE_DATATYPE_HPP
+#ifndef CAF_CRDT_TYPES_BASE_DATATYPE_HPP
+#define CAF_CRDT_TYPES_BASE_DATATYPE_HPP
 
 #include <string>
 
 #include "caf/message.hpp"
 
-#include "caf/replication/atom_types.hpp"
+#include "caf/crdt/atom_types.hpp"
 
-#include "caf/replication/interfaces/publish_subscribe.hpp"
+#include "caf/actor_ostream.hpp"
 
 namespace caf {
-namespace replication {
 namespace crdt {
+namespace types {
 
 ///
-//template <class T>
-class base_datatype {
-public:
-  /// Default constructor
-  base_datatype() : owner_(unsafe_actor_handle_init)
-                  , parent_(unsafe_actor_handle_init) {
-    // nop
+struct base_datatype {
+  /// @private
+  base_datatype() = default;
+
+  ///
+  template <class ActorType>
+  base_datatype(const ActorType& owner, const std::string& topic)
+    : owner_(actor_cast<actor>(owner)), topic_(topic) {
+    auto hdl = owner_.home_system().replicator().actor_handle();
+    send_as(owner_, hdl, subscribe_atom::value, uri{topic});
   }
 
-  /*T merge(message msg) {
-    T result;
-    msg.apply([&](const T& unpacked) {
-      result = std::move(this->merge(unpacked));
-    },
-    others >> [] {
-      // TODO: ERROR!
-    });
-    return result;
-  }*/
+  virtual ~base_datatype() {
+    // If owner_ is no longer valid, the actor system got shut down and it is
+    // no longer possible nor necessary to unsubscribe
+    if (owner_) {
+      auto hdl = owner_.home_system().replicator().actor_handle();
+      send_as(owner_, hdl, unsubscribe_atom::value, uri{topic_});
+    }
+  }
 
   /// @returns topic of this state
-  inline const std::string& topic() const { return topic_; }
+  inline std::string topic() const { return topic_.str(); }
 
-  /// @returns owning actor
+  /// @returns the owner of this state
   inline const actor& owner() const { return owner_; }
 
-  /// @returns local node
-  inline node_id node() const { return owner_.node(); }
-
   /// @private
-  inline void set_owner(actor act) { owner_ = std::move(act); }
-
-  /// @private
-  inline void set_parent(actor act) { parent_ = std::move(act); }
-
-  /// @private
-  inline void set_topic(std::string topic) { topic_ = std::move(topic); }
+  template <class Processor>
+  friend void serialize(Processor& proc, base_datatype& x) {
+    proc & x.topic_;
+  }
 
 protected:
-  /// Propagate transaction to our parent
+  ///
   template <class Data>
   void publish(const Data& data) const {
-    if (!parent_.unsafe())
-      send_as(owner_, parent_, publish_atom::value, data);
+    if (!owner_)
+      return;
+    auto hdl = owner_.home_system().replicator().actor_handle();
+    send_as(owner_, hdl, topic_, make_message(data));
   }
 
 private:
-  actor owner_; /// Owning actor of this state
-  actor parent_; /// Parent of owning actor
-  std::string topic_; /// Topic for this datatype
+  actor owner_; /// Owner of this state
+  uri topic_;   /// Topic for this datatype
 };
 
-
+} // namespace types
 } // namespace crdt
-} // namespace replication
 } // namespace caf
 
-#endif // CAF_REPLICATION_CRDT_BASE_DATATYPE_HPP
+#endif // CAF_CRDT_TYPES_BASE_DATATYPE_HPP

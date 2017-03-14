@@ -18,18 +18,18 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_DETAIL_REPLICATOR_HOOKS_HPP
-#define CAF_REPLICATION_DETAIL_REPLICATOR_HOOKS_HPP
+#ifndef CAF_CRDT_DETAIL_REPLICATOR_HOOKS_HPP
+#define CAF_CRDT_DETAIL_REPLICATOR_HOOKS_HPP
 
 #include "caf/scoped_actor.hpp"
 
 #include "caf/io/hook.hpp"
 
 namespace caf {
-namespace replication {
+namespace crdt {
 namespace detail {
 
-///
+/// IO-Hooks used by replicator
 class replicator_hooks : public io::hook {
 public:
   replicator_hooks(actor_system& sys);
@@ -43,19 +43,16 @@ public:
   /// Called whenever a direct connection was lost.
   void connection_lost_cb(const node_id& dest) override;
 
-  /// Called before middleman shuts down.
-  void before_shutdown_cb() override;
-
 private:
 
-  void add_new_node(const node_id& nid);
+  void new_connection(const node_id& node);
 
   scoped_actor self_;
   actor_system& sys_;
 };
 
 } // namespace detail
-} // namespace replication
+} // namespace crdt
 } // namespace caf
 
-#endif // CAF_REPLICATION_DETAIL_REPLICATOR_HOOKS_HPP
+#endif // CAF_CRDT_DETAIL_REPLICATOR_HOOKS_HPP

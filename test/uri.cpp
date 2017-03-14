@@ -18,25 +18,37 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
- #ifndef CAF_REPLICATION_INTERFACES_TREE_HPP
- #define CAF_REPLICATION_INTERFACES_TREE_HPP
+#define CAF_SUITE uri
+#include "caf/test/unit_test.hpp"
 
-#include "caf/typed_actor.hpp"
+#include "caf/all.hpp"
 
-#include "caf/replication/interfaces/publish_subscribe.hpp"
+#include "caf/crdt/uri.hpp"
 
-namespace caf {
-namespace replication {
+using namespace caf;
+using namespace caf::crdt;
 
-/// Interface to build a tree by providing a set parent function and allow
-/// to have childs
-template <class State>
-using tree_t = typed_actor<
-  reacts_to<set_parent_atom, publishable_t<State>>,
-  reacts_to<add_child_atom, publishable_t<State>>
->;
+CAF_TEST(uri_parse) {
+  std::string valid[] = {"gset<int>://videos/*",
+                         "gset<string>://videos/bleh",
+                         "gset<string>://videos",
+                         "gset<int>://rand",
+                         "gcounter<size_t>://views/videos/filmchen/*",
+                         "lww_reg<int>://"
+  };
+  std::string invalid[] = {"",
+                           "*",
+                           "://",
+                           "gset<int>://rand/*/"
+  };
+  for (auto& what : valid) CAF_CHECK(uri{what}.valid());
+  for (auto& what : invalid) CAF_CHECK(!uri{what}.valid());
+}
 
-} // namespace replication
-} // namespace caf
-
- #endif // CAF_REPLICATION_INTERFACES_TREE_HPP
+CAF_TEST(uri_rrti) {
+  struct a {};
+  auto cfg = actor_system_config{};
+  cfg.add_message_type<a>("a");
+  actor_system system{cfg};
+  CAF_CHECK(uri{"a://"}.match_rtti<a>(system));
+}

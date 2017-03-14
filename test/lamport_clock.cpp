@@ -18,25 +18,24 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_INTERFACES_NOTIFYABLE_HPP
-#define CAF_REPLICATION_INTERFACES_NOTIFYABLE_HPP
+#define CAF_SUITE lamport_clock
+#include "caf/test/unit_test.hpp"
 
-#include "caf/typed_actor.hpp"
+#include "caf/crdt/lamport_clock.hpp"
 
-#include "caf/replication/atom_types.hpp"
+using namespace caf::crdt;
 
-namespace caf {
-namespace replication {
-
-/// Interface definition for actors which work with CRDT States and support
-/// notifications.
-template <class State>
-using notifyable_t = typed_actor<
-  reacts_to<initial_atom, State>,
-  reacts_to<notify_atom, typename State::transaction_t>
->;
-
-} // namespace replication
-} // namespace caf
-
-#endif // CAF_REPLICATION_INTERFACES_NOTIFYABLE_HPP
+CAF_TEST(compare) {
+  lamport_clock l1, l2;
+  CAF_CHECK(l1 == l2);
+  CAF_CHECK(!(l1 < l2));
+  CAF_CHECK(!(l1 > l2));
+  CAF_CHECK(l1 == l2.time());
+  // ...
+  CAF_CHECK(l1.increment() == 1);
+  CAF_CHECK(l1 != l2);
+  CAF_CHECK(l1 > l2);
+  CAF_CHECK(l1 == l2.increment());
+  l1.merge({42});
+  CAF_CHECK(l1 == 42);
+}

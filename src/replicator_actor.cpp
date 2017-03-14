@@ -18,17 +18,22 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/replication/replicator_actor.hpp"
+#include "caf/crdt/replicator_actor.hpp"
 
-#include "caf/after.hpp"
 #include "caf/message.hpp"
 #include "caf/node_id.hpp"
 #include "caf/typed_event_based_actor.hpp"
 
 #include "caf/io/middleman.hpp"
 
+#include "caf/crdt/detail/distribution_layer.hpp"
+
+#include <tuple>
+#include <vector>
+#include <unordered_map>
+
 namespace caf {
-namespace replication {
+namespace crdt {
 
 namespace {
 
@@ -36,12 +41,9 @@ namespace {
 struct replicator_actor_impl : public replicator_actor::base {
 
   replicator_actor_impl(actor_config& cfg)
-    : replicator_actor::base(cfg)/*,
-      policy_({new update_policy::ring(this)})*/ {
+      : replicator_actor::base(cfg), dist(this) {
     // nop
   }
-
-  virtual ~replicator_actor_impl() = default;
 
   const char* name() const override {
     return "replicator_actor";
@@ -49,22 +51,89 @@ struct replicator_actor_impl : public replicator_actor::base {
 
 protected:
   behavior_type make_behavior() override {
+    send(this, tick_state_atom::value);
+    send(this, tick_topics_atom::value);
     return {
-      [&](from_local_atom, const std::string& topic, const message& msg) {
-        // TODO: We recieved a message from our root_replica, forward to other
-        // nodes...
-        // for (auto& neighbor : neighbors)
-        //   send(neighbor, from_remote_atom::value, topic, msg);
+      // ---
+      [&](uri& topic, const message& msg) {
+        if (current_sender()->node() == this->node())
+          dist.publish(topic, msg); // Remote send message
+        delegate(find_actor(topic), publish_atom::value, msg);
       },
-      [&](from_remote_atom, const std::string& topic, const message& msg) {
-        // TODO: We recieved a remote message, we have to forward the message
-        // to our root_replica
+      [&](tick_state_atom) {
+        // All states have to send their state to the replicator
+        for (auto& state : states_)
+          anon_send(state.second, copy_atom::value);
+        delayed_send(this, std::chrono::seconds(1), tick_state_atom::value);
+      },
+      [&](copy_ack_atom, const uri& u, const message& msg) {
+        dist.publish(u, msg);
+      },
+      [&](tick_topics_atom) {
+        dist.pull_topics();
+        delayed_send(this, std::chrono::seconds(1),
+                     tick_topics_atom::value);
+      },
+      // ---
+      [&](new_connection_atom, const node_id& node) {
+        dist.add_new_node(node);
+      },
+      [&](connection_lost_atom, const node_id& nid) {
+        dist.remove_node(nid);
+      },
+      [&](get_topics_atom, size_t seen) {
+        dist.get_topics(current_sender()->node(), seen);
+      },
+      [&](size_t version, std::unordered_set<uri>& topics) {
+        dist.update(current_sender()->node(), version, std::move(topics));
+      },
+      // --- Subscribe & Unsubscribe
+      [&](subscribe_atom, const uri& u) {
+        delegate(find_actor(u), subscribe_atom::value);
+      },
+      [&](unsubscribe_atom, const uri& u) {
+        delegate(find_actor(u), unsubscribe_atom::value);
+      },
+      // -- Read & Write Consistencies
+      [&](read_all_atom, const uri& u) {
+        delegate(find_actor(u), read_all_atom::value, u, dist.get_intrested(u));
+      },
+      [&](read_majority_atom, const uri& u) {
+        delegate(find_actor(u), read_majority_atom::value, u,
+                 dist.get_intrested(u));
+      },
+      [&](read_local_atom, const uri& u) {
+        delegate(find_actor(u), read_local_atom::value);
+      },
+      [&](write_all_atom, const uri& u, const message& msg) {
+        delegate(find_actor(u), write_all_atom::value, u,
+                 dist.get_intrested(u), msg);
+      },
+      [&](write_majority_atom, const uri& u, const message& msg) {
+        delegate(find_actor(u), write_majority_atom::value, u,
+                 dist.get_intrested(u), msg);
+      },
+      [&](write_local_atom, const uri& u, const message& msg) {
+        delegate(find_actor(u), write_local_atom::value, msg);
       }
     };
   }
 
 private:
-  //std::unique_ptr<update_policy::base_policy> policy_;
+
+  actor find_actor(const uri& u) {
+    auto iter = states_.find(u);
+    if (iter == states_.end()) {
+      auto opt = system().spawn<actor>(u.scheme(), make_message(u));
+      iter = states_.emplace(u, *opt).first;
+      dist.add_topic(u);
+    }
+    return iter->second;
+  }
+  ///
+  std::unordered_map<uri, actor> states_;
+  /// Organize distribution of updates
+  detail::distribution_layer dist;
 };
 
 } // namespace <anonymous>
@@ -73,5 +142,5 @@ replicator_actor make_replicator_actor(actor_system& sys) {
   return sys.spawn<replicator_actor_impl, hidden>();
 }
 
-} // namespace replication
+} // namespace crdt
 } // namespace caf

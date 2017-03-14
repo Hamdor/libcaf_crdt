@@ -25,13 +25,16 @@
 
 #include "caf/io/middleman.hpp"
 
-#include "caf/replication/replicator.hpp"
+#include "caf/crdt/replicator.hpp"
+
+#include "caf/crdt/detail/register_types.hpp"
+#include "caf/crdt/detail/replicator_hooks.hpp"
 
 #include <exception>
 
 using namespace std;
 using namespace caf;
-using namespace caf::replication;
+using namespace caf::crdt;
 
 void replicator::start() {
   manager_ = make_replicator_actor(system_);
@@ -49,9 +52,12 @@ void replicator::stop() {
 }
 
 void replicator::init(actor_system_config& cfg) {
+  // TODO: Add all message types... and remove outdated
   cfg.add_hook_type<detail::replicator_hooks>().
       add_message_type<std::unordered_map<std::string, message>>("merged_updates").
       add_message_type<std::unordered_map<std::string, std::vector<message>>>("unmerged_messages");
+  // Default supportet replica types
+  detail::register_types{cfg}();
 }
 
 actor_system::module::id_t replicator::id() const {
@@ -72,7 +78,7 @@ replicator_actor replicator::actor_handle() {
 }
 
 replicator::replicator(actor_system& sys) : system_(sys),
-                                            manager_(unsafe_actor_handle_init) {
+                                            manager_{} {
   // nop
 }
 

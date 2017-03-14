@@ -17,16 +17,53 @@
  * http://opensource.org/licenses/BSD-3-Clause and                            *
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
+/*
+#include "caf/all.hpp"
 
-#ifndef CAF_REPLICATION_ALL_HPP
-#define CAF_REPLICATION_ALL_HPP
+#include "caf/crdt/all.hpp"
 
-#include "caf/replication/atom_types.hpp"
-#include "caf/replication/replicator.hpp"
+#include "caf/crdt/uri.hpp"
 
-#include "caf/replication/interfaces/notifyable.hpp"
+#include <set>
+#include <iostream>
 
-#include "caf/replication/crdt/gset.hpp"
-#include "caf/replication/crdt/gcounter.hpp"
+using namespace caf;
+using namespace caf::crdt;
+using namespace caf::crdt::types;
 
-#endif // CAF_REPLICATION_ALL_HPP
+struct some_crap {};
+
+int main() {
+  std::string tests[] = {"gset<int>://videos/*",
+                         "gset<string>://videos/bleh",
+                         "gset<string>://videos",
+                         "gset<int>://rand",
+                         "gcounter<size_t>://views/videos/filmchen/*"
+  };
+  for (auto& what : tests) {
+    uri u{what};
+    if (u.valid())
+      std::cout << "scheme/type: " << u.scheme()    << std::endl
+                << "path/topic:  " << u.path()      << std::endl
+                << "uri:         " << u.to_string() << std::endl;
+    else
+      std::cout << "invalid uri (" << what << ")" << std::endl;
+    std::cout << "-----------------------------------------------------"
+              << std::endl;
+  }
+  // ----
+  auto cfg = actor_system_config{};
+  cfg.add_message_type<types::gset<int>>("gset<int>");
+  actor_system system{cfg};
+  // ----
+  auto u = uri{"gset<int>://rand"};
+  std::cout << std::boolalpha << "assumed (true, false): "
+            << u.match_rtti<types::gset<int>>(system) << ", "
+            << u.match_rtti<types::gset<float>>(system) << std::endl;
+  return 0;
+}
+*/
+
+int main() {
+
+}

@@ -18,30 +18,24 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_INTERFACES_PUBLISH_SUBSCRIBE_HPP
-#define CAF_REPLICATION_INTERFACES_PUBLISH_SUBSCRIBE_HPP
+#ifndef CAF_CRDT_NOTIFYABLE_HPP
+#define CAF_CRDT_NOTIFYABLE_HPP
 
-#include "caf/replication/interfaces/notifyable.hpp"
+#include "caf/typed_actor.hpp"
+
+#include "caf/crdt/atom_types.hpp"
 
 namespace caf {
-namespace replication {
+namespace crdt {
 
-/// Interface definition for actors which support subscribe/unsubscribe
+/// Interface definition for actors which work with CRDT States and support
+/// notifications.
 template <class State>
-using subscribable_t = typed_actor<
-  typename replies_to<
-    subscribe_atom,
-    notifyable_t<State>
-  >::template with<initial_atom, State>,
-  reacts_to<unsubscribe_atom, notifyable_t<State>>>;
-
-/// Interface definition for actors which support publish
-template <class State>
-using publishable_t = typed_actor<
-  reacts_to<publish_atom, typename State::transaction_t>
+using notifyable = typed_actor<
+  reacts_to<notify_atom, State>
 >;
 
-} // namespace replication
+} // namespace crdt
 } // namespace caf
 
-#endif // CAF_REPLICATION_INTERFACES_PUBLISH_SUBSCRIBE_HPP
+#endif // CAF_CRDT_NOTIFYABLE_HPP

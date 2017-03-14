@@ -18,29 +18,62 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_REPLICATOR_ACTOR_HPP
-#define CAF_REPLICATION_REPLICATOR_ACTOR_HPP
+#ifndef CAF_CRDT_REPLICATOR_ACTOR_HPP
+#define CAF_CRDT_REPLICATOR_ACTOR_HPP
 
-#include <string>
+#include "caf/fwd.hpp"
+#include "caf/node_id.hpp"
 
-#include "caf/message.hpp"
 #include "caf/typed_actor.hpp"
 
-#include "caf/replication/atom_types.hpp"
+#include "caf/crdt/uri.hpp"
+#include "caf/crdt/atom_types.hpp"
+
+#include <unordered_set>
 
 namespace caf {
-namespace replication {
+namespace crdt {
 
-///
+/// Interface of replicator
 using replicator_actor = typed_actor<
-  reacts_to<from_local_atom, std::string, message>,
-  reacts_to<from_remote_atom, std::string, message>
+  /// Topic message pair, where the message contains updates for a topic
+  reacts_to<uri, message>,
+  /// Internal tick message to send complete state, this messages starts the
+  /// local collection process of all states.
+  reacts_to<tick_state_atom>,
+  /// Response to `copy_atom`, the message contains the full state of the replic
+  reacts_to<copy_ack_atom, uri, message>,
+  /// Internal tick message to flush topics
+  reacts_to<tick_topics_atom>,
+  /// A new connection to a CAF node (node_id) is established
+  reacts_to<new_connection_atom, node_id>,
+  /// A connection to a CAF node (node_id) is lost
+  reacts_to<connection_lost_atom, node_id>,
+  /// Return a unordered set of uris to sender
+  reacts_to<get_topics_atom, size_t>,
+  reacts_to<size_t, std::unordered_set<uri>>,
+  /// Subscribes a actor to a replica topic
+  reacts_to<subscribe_atom, uri>,
+  /// Unsubscribes a actor from a replica topic
+  reacts_to<unsubscribe_atom, uri>,
+  /// Reads the value from all nodes
+  reacts_to<read_all_atom, uri>,
+  /// Reads the value from a majority of nodes
+  reacts_to<read_majority_atom, uri>,
+  /// Reads only the local value
+  reacts_to<read_local_atom, uri>,
+  /// Writes to all nodes
+  reacts_to<write_all_atom, uri, message>,
+  /// Writes to a majority of nodes
+  reacts_to<write_majority_atom, uri, message>,
+  /// Writes only to local node
+  reacts_to<write_local_atom, uri, message>
 >;
 
 ///@relates replicator_actor
 replicator_actor make_replicator_actor(actor_system& sys);
 
-} // namespace replication
+} // namespace crdt
 } // namespace caf
 
-#endif // CAF_REPLICATION_REPLICATOR_ACTOR_HPP
+#endif // CAF_CRDT_REPLICATOR_ACTOR_HPP

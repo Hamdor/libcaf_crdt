@@ -26,27 +26,39 @@
 
 #include "caf/all.hpp"
 #include "caf/io/all.hpp"
-#include "caf/replication/all.hpp"
+#include "caf/crdt/all.hpp"
 
-#include "caf/replication/detail/root_replica_actor.hpp"
+#include "caf/crdt/detail/distribution_layer.hpp"
+
+#include "caf/crdt/lamport_clock.hpp"
 
 using namespace std;
 using namespace caf;
-using namespace caf::replication;
+using namespace caf::crdt;
+
+namespace std {
+
+template <>
+bool operator< (const std::pair<int, std::unordered_set<caf::crdt::uri>>& lhs,
+                const std::pair<int, std::unordered_set<caf::crdt::uri>>& rhs) {
+    return lhs.first < rhs.first;
+};
+
+} // namespace std
 
 /// Example worker, supports the `notifyabe_type<>` interface, to fetch data
 /// from local top level replica.
 template <class State>
-class worker : public notifyable_t<State>::base {
+class worker : public State::base {
 public:
   worker(actor_config& cfg, std::string some_str)
-      : notifyable_t<State>::base(cfg), id_string_(std::move(some_str)) {
+      : State::base(cfg), id_string_(std::move(some_str)) {
     // nop
   }
 
-  typename notifyable_t<State>::behavior_type make_behavior() override {
+  typename State::behavior_type make_behavior() override {
     return {
-      [&](initial_atom, const State& state) {
+      [&](initial_atom, State& state) {
         aout(this) << id_string_ << ": init" << endl;
         // Set initial state
         // The recieved state is configured to propagate update
@@ -79,7 +91,7 @@ private:
 };
 
 /// TODO: Implement a working config ....
-struct cfg : public actor_system_config {
+/*struct cfg : public actor_system_config {
   using duration_t = decltype(std::chrono::milliseconds(0));
   cfg() {
     load<io::middleman>().
@@ -95,8 +107,8 @@ struct cfg : public actor_system_config {
     // Register actor types
     // https://actor-framework.readthedocs.io/en/latest/ConfiguringActorApplications.html?highlight=custom%20actor%20types#adding-custom-actor-types-experimental
 
-    add_actor_type(root_type_id, caf::replication::detail::root_replica_actor<T>);
-    add_actor_type(topic, caf::replication::detail::replica_actor<T>);
+    add_actor_type(root_type_id, caf::crdt::detail::root_replica_actor<T>);
+    add_actor_type(topic, caf::crdt::detail::replica_actor<T>);
     //
     child_args.emplace_back(topic, "/", sync);
     //
@@ -115,7 +127,8 @@ struct cfg : public actor_system_config {
   //                      topic,       path,       interval
   std::vector<std::tuple<std::string, std::string, duration_t>> child_args;
   std::vector<std::tuple<std::string, std::string, duration_t, duration_t> root_args;
-};
+};*/
+
 
 int main(int argc, char* argv[]) {
   auto flush_interval  = std::chrono::seconds(1);
@@ -127,17 +140,21 @@ int main(int argc, char* argv[]) {
   //       sub1      sub2
   //      /
   //  hello
-  actor_system system{
-    cfg{}.add_replica<crdt::gset<int>>(topic, /*"/",*/ flush_interval,
+  /*actor_system system{
+    cfg{}.add_replica<types::gset<int>>(topic, "/", flush_interval,
                                        resync_interval)
-         .add_replica<crdt::gset<int>>(topic, "/sub1", flush_interval,
+         .add_replica<types::gset<int>>(topic, "/sub1", flush_interval,
                                        resync_interval)
-         .add_replica<crdt::gset<int>>(topic, "/sub1/hello", flush_interval,
+         .add_replica<types::gset<int>>(topic, "/sub1/hello", flush_interval,
                                        resync_interval)
-         .add_replica<crdt::gset<int>>(topic, "/sub2", flush_interval,
+         .add_replica<types::gset<int>>(topic, "/sub2", flush_interval,
                                        resync_interval)
          .load<io::middleman>()
-         .load<replication::replicator>()};
+         .load<replication::replicator>()};*/
+  crdt_config cfg{};
+  cfg.load<io::middleman>().load<crdt::replicator>();
+  cfg.add_crdt<types::gset<int>>("gset<int>");
+  actor_system system{cfg};
   // --- Spawn some workers
   // Spawn a new tree:
   //       root
@@ -145,18 +162,34 @@ int main(int argc, char* argv[]) {
   //   sub1    sub2
   //   /
   // subsub1
-  auto worker1 = system.spawn<worker<crdt::gset<int>>>("worker1");
-  auto worker2 = system.spawn<worker<crdt::gset<int>>>("worker2");
-  auto worker3 = system.spawn<worker<crdt::gset<int>>>("worker3");
-  // --- Subscribe to updates ==> authority (host) + path (topic)
+  auto worker1 = system.spawn<worker<types::gset<int>>>("worker1");
+  auto worker2 = system.spawn<worker<types::gset<int>>>("worker2");
+  auto worker3 = system.spawn<worker<types::gset<int>>>("worker3");
+
+  uri u{"gset<int>://rand"};
+
   auto& repl = system.replicator();
-  repl.subscribe<crdt::gset<int>>("/rand", "/sub2", worker1);
-  repl.subscribe<crdt::gset<int>>("/rand", "/sub1/subsub1", worker2);
-  repl.subscribe<crdt::gset<int>>("/rand", "/sub1", worker3);
-  // -- TODO: Move to unit test
-  /*crdt::gcounter<int> b;
-  std::cout << "Value: " << b.count() << ", " << (b += 2) << ", " << b.count()
-            << ", " << b++ << ", " << b.count() << ", " << ++b << std::endl;
-  // Bleh...
-  system.spawn(caf::replication::detail::root_replica_actor<crdt::gset<int>>, "hello");*/
+  repl.subscribe<types::gset<int>>(u, /*"/sub2",*/ worker1);
+  repl.subscribe<types::gset<int>>(u, /*"/sub1/subsub1",*/ worker2);
+  repl.subscribe<types::gset<int>>(u, /*"/sub1",*/ worker3);
+
+  types::gmap<node_id, std::pair<int, std::unordered_set<uri>>> some_map;
+  some_map.assign(node_id{}, make_pair(12, std::unordered_set<uri>{}));
+  some_map.assign(node_id{}, make_pair(11, std::unordered_set<uri>{}));
+
+/*
+  // gset<int>://videos/<ids>
+  // gset<string>://videos/<ids>
+  // /likes/videos/<id>
+  // /likes/comments/<vid>/<id>
+  auto topic = system.replicator().topic<std::set<uri>>("all?t=gset<int>://videos/*");
+  auto topic = system.replicator().topic<types::gset<int>>("gset<int>://rand");
+  self.send(worker1, topic);
+  spawn([=](event_based_actor* self) {
+    self->join(topic, ""); // root (default)
+    self->join(topic, "w1"); // root.w1
+    self->join(topic, "w1.g1"); // root.w1.g1
+    self->send(topic, transaction{insert, 42});
+  });
+*/
 }

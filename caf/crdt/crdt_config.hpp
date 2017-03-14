@@ -7,7 +7,7 @@
  *                                                                            *
  * Copyright (C) 2011 - 2016                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
- * Marian Triebe <marian.triebe (at) haw-hamburg.de>                          *
+ * Marian Triebe <marian.triebe (at) haw-hamburg.de>
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -18,33 +18,33 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/crdt/detail/replicator_hooks.hpp"
+#ifndef CAF_CRDT_CRDT_CONFIG_HPP
+#define CAF_CRDT_CRDT_CONFIG_HPP
 
-#include "caf/crdt/replicator.hpp"
+#include "caf/actor_system_config.hpp"
 
-using namespace caf::crdt::detail;
+#include "caf/crdt/detail/replica.hpp"
 
-replicator_hooks::replicator_hooks(actor_system& sys)
-    : io::hook(sys),
-      self_(sys, true),
-      sys_(sys) {
-  // nop
-}
+namespace caf {
+namespace crdt {
 
-void replicator_hooks::new_connection_established_cb(const node_id& node) {
-  new_connection(node);
-}
+/// Extended `actor_system_config` to support the CRDT module.
+struct crdt_config : public virtual actor_system_config {
+  crdt_config() : actor_system_config() {
+    load<crdt::replicator>();
+  }
 
-void replicator_hooks::new_route_added_cb(const node_id&, const node_id& node) {
-  new_connection(node);
-}
+  /// Adds crdt `Type` to the module
+  template <class Type>
+  actor_system_config& add_crdt(const std::string& name) {
+    add_message_type<Type>(name);
+    add_actor_type<crdt::detail::replica<Type>,
+                   const uri&>(name);
+    return *this;
+  }
+};
 
-void replicator_hooks::connection_lost_cb(const node_id& node) {
-  auto hdl = sys_.replicator().actor_handle();
-  self_->send(hdl, connection_lost_atom::value, node);
-}
+} // namespace crdt
+} // namespace caf
 
-void replicator_hooks::new_connection(const node_id& node) {
-  auto hdl = sys_.replicator().actor_handle();
-  self_->send(hdl, new_connection_atom::value, node);
-}
+#endif // CAF_CRDT_CRDT_CONFIG_HPP

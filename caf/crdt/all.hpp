@@ -18,33 +18,15 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#include "caf/crdt/detail/replicator_hooks.hpp"
+#ifndef CAF_CRDT_ALL_HPP
+#define CAF_CRDT_ALL_HPP
 
+#include "caf/crdt/uri.hpp"
+#include "caf/crdt/atom_types.hpp"
+#include "caf/crdt/notifyable.hpp"
 #include "caf/crdt/replicator.hpp"
+#include "caf/crdt/crdt_config.hpp"
 
-using namespace caf::crdt::detail;
+#include "caf/crdt/types/all.hpp"
 
-replicator_hooks::replicator_hooks(actor_system& sys)
-    : io::hook(sys),
-      self_(sys, true),
-      sys_(sys) {
-  // nop
-}
-
-void replicator_hooks::new_connection_established_cb(const node_id& node) {
-  new_connection(node);
-}
-
-void replicator_hooks::new_route_added_cb(const node_id&, const node_id& node) {
-  new_connection(node);
-}
-
-void replicator_hooks::connection_lost_cb(const node_id& node) {
-  auto hdl = sys_.replicator().actor_handle();
-  self_->send(hdl, connection_lost_atom::value, node);
-}
-
-void replicator_hooks::new_connection(const node_id& node) {
-  auto hdl = sys_.replicator().actor_handle();
-  self_->send(hdl, new_connection_atom::value, node);
-}
+#endif // CAF_CRDT_ALL_HPP

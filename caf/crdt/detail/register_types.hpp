@@ -18,38 +18,38 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_REPLICATION_ATOM_TYPES_HPP
-#define CAF_REPLICATION_ATOM_TYPES_HPP
+#ifndef CAF_CRDT_DETAIL_REGISTER_TYPES_HPP
+#define CAF_CRDT_DETAIL_REGISTER_TYPES_HPP
 
-#include "caf/atom.hpp"
+#include "caf/actor_system_config.hpp"
+
+#include "caf/crdt/types/all.hpp"
+
+#include "caf/crdt/detail/replica.hpp"
+
+#include "caf/crdt/detail/distribution_layer.hpp"
 
 namespace caf {
-namespace replication {
+namespace crdt {
+namespace detail {
 
-/// Initial atom is recieved after subscribe to a replica
-using initial_atom = atom_constant<atom("init")>;
+struct register_types {
 
-/// Send to subscribed actors when a replica has changed
-using notify_atom = atom_constant<atom("notify")>;
+  register_types(actor_system_config& cfg) : cfg_(cfg) {
+    // nop
+  }
 
-// -------- Internal atoms -----------------------------------------------------
+  void operator()() noexcept {
+    cfg_.add_message_type<uri>("uri");
+    cfg_.add_message_type<std::unordered_set<uri>>("unordered_set<uri>");
+  }
 
-/// Atom used to register the replicator
-using replicator_atom = atom_constant<atom("replicator")>;
+private:
+  actor_system_config& cfg_;
+};
 
-/// @private
-using from_local_atom = atom_constant<atom("fromlocal")>;
-
-/// @private
-using from_remote_atom = atom_constant<atom("fromremote")>;
-
-/// @private
-using set_parent_atom = atom_constant<atom("setparent")>;
-
-/// @private
-using add_child_atom = atom_constant<atom("addchild")>;
-
-} // namespace replication
+} // namespace detail
+} // namespace crdt
 } // namespace caf
 
-#endif // CAF_REPLICATION_ATOM_TYPES_HPP
+#endif // CAF_CRDT_DETAIL_REGISTER_TYPES_HPP
