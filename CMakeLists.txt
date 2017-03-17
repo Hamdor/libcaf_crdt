@@ -13,7 +13,8 @@ add_custom_target(libcaf_crdt)
 set (LIBCAF_CRDT_SRCS
      src/replicator.cpp
      src/replicator_actor.cpp
-     src/replicator_hooks.cpp)
+     src/replicator_hooks.cpp
+     src/vector_clock.cpp)
 
 # build shared library if not compiling static only
 if(NOT CAF_BUILD_STATIC_ONLY)
