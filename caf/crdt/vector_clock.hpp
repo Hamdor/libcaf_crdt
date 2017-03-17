@@ -63,8 +63,10 @@ public:
 
   /// Increments the slot of given actor
   /// @param slot actor handle for key to increment slot
-  /// @returns vector_clock representing the delta
-  vector_clock increment(const actor& slot);
+  /// @param delta specifies if the returned state represents the delta or
+  ///        the full clock. Often the full clock is needed inside of CRDTs
+  /// @returns vector_clock representing the full clock or delta
+  vector_clock increment(const actor& slot, bool delta = false);
 
   /// Returns the value of given slot
   /// @param slot actor handle of slot

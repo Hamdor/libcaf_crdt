@@ -23,9 +23,11 @@
 using namespace caf;
 using namespace caf::crdt;
 
-vector_clock vector_clock::increment(const actor& slot) {
+vector_clock vector_clock::increment(const actor& slot, bool delta) {
   map_[slot]++;
-  return {slot, map_[slot]};
+  if (delta) // Return only delta
+    return {slot, map_[slot]};
+  return *this; // Return a full copy
 }
 
 size_t vector_clock::get(const actor& key) const {
