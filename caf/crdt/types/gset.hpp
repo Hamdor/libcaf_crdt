@@ -46,7 +46,7 @@ struct gset : public base_datatype,
 
   template <class ActorType>
   gset(ActorType&& owner, std::string topic)
-    : base_datatype(std::move(owner), std::move(topic)) {
+    : base_datatype(std::forward<ActorType>(owner), std::move(topic)) {
     // nop
   }
 
