@@ -90,10 +90,10 @@ using new_connection_atom = atom_constant<atom("newcon")>;
 using connection_lost_atom = atom_constant<atom("conlost")>;
 
 /// @private
-using get_topics_atom = atom_constant<atom("gettopics")>;
+using get_ids_atom = atom_constant<atom("getids")>;
 
 /// @private
-using delete_topic_atom = atom_constant<atom("deltopic")>;
+using delete_id_atom = atom_constant<atom("delid")>;
 
 } // namespace crdt
 } // namespace caf

@@ -81,7 +81,7 @@ protected:
       [&](connection_lost_atom, const node_id& nid) {
         dist.remove_node(nid);
       },
-      [&](get_topics_atom, size_t seen) {
+      [&](get_ids_atom, size_t seen) {
         dist.get_topics(current_sender()->node(), seen);
       },
       [&](size_t version, std::unordered_set<uri>& topics) {

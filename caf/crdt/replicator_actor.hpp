@@ -50,7 +50,7 @@ using replicator_actor = typed_actor<
   /// A connection to a CAF node (node_id) is lost
   reacts_to<connection_lost_atom, node_id>,
   /// Return a unordered set of uris to sender
-  reacts_to<get_topics_atom, size_t>,
+  reacts_to<get_ids_atom, size_t>,
   reacts_to<size_t, std::unordered_set<uri>>,
   /// Subscribes a actor to a replica topic
   reacts_to<subscribe_atom, uri>,

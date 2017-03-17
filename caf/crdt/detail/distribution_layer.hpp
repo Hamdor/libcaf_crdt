@@ -56,7 +56,7 @@ struct distribution_layer {
     if (query) {
       auto repl = actor_cast<replicator_actor>(query);
       store_.emplace(nid, std::make_tuple(0, repl, std::unordered_set<uri>{}));
-      send_as(impl_, repl, get_topics_atom::value, size_t{0});
+      send_as(impl_, repl, get_ids_atom::value, size_t{0});
     }
   }
 
@@ -101,7 +101,7 @@ struct distribution_layer {
         continue;
       auto& seen = std::get<0>(entry.second);
       auto& rep  = std::get<1>(entry.second);
-      send_as(impl_, rep, get_topics_atom::value, seen);
+      send_as(impl_, rep, get_ids_atom::value, seen);
     }
   }
 
