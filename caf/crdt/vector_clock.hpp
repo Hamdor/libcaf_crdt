@@ -28,6 +28,15 @@
 namespace caf {
 namespace crdt {
 
+/// Return type for vector clock compares
+/// @relates `vector_clock`
+enum vector_clock_result {
+  GREATER,
+  EQUAL,
+  SMALLER,
+  SIMULTANEOUS
+};
+
 /// Vector clock implementation for tracking events with vector timestamps
 class vector_clock {
   /// Internal map type
@@ -60,7 +69,15 @@ public:
   /// Returns the value of given slot
   /// @param slot actor handle of slot
   /// @returns the value for given slot
-  size_t value_of(const actor& slot) const;
+  size_t get(const actor& slot) const;
+
+  /// Compare two vector clocks and return a value of `vector_clock_result`
+  /// @param other `vector_clock` to compare to
+  /// @returns `GREATER` if `other` is greater                 this < other
+  ///          `EQUAL`   if `other` is equal to `this`         this == other
+  ///          `SMALLER` if `other` is smaller                 this > other
+  ///          `SIMULTANEOUS` if there are concurrent events   this || other
+  vector_clock_result compare(const vector_clock& other) const;
 
   /// Merges to `other` into `this` and returns the delta
   /// @param other `vector_clock` to merge into `this`
@@ -74,6 +91,8 @@ public:
   }
 
 private:
+  size_t count(const actor& slot) const;
+
   map_type map_; /// Internal map
 };
 

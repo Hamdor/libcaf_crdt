@@ -28,9 +28,42 @@ vector_clock vector_clock::increment(const actor& slot) {
   return {slot, map_[slot]};
 }
 
-size_t vector_clock::value_of(const actor& slot) const {
-  auto iter = map_.find(slot);
+size_t vector_clock::get(const actor& key) const {
+  auto iter = map_.find(key);
   return iter == map_.end() ? 0 : iter->second;
+}
+
+vector_clock_result vector_clock::compare(const vector_clock& other) const {
+  bool equal = true;
+  bool greater = true;
+  bool smaller = true;
+  for (auto& e : map_) {
+    auto key = e.first;
+    auto value = e.second;
+    if (other.count(key)) {
+      if (value < other.get(key)) {
+         equal = false;
+         greater = false;
+      }
+      if (value > other.get(key)) {
+         equal = false;
+         smaller = false;
+      }
+    } else if (value != 0) {
+      equal = false;
+      smaller = false;
+    }
+  }
+  for (auto& e : other.map_) {
+    if (!map_.count(e.first) && e.second != 0) {
+      equal = false;
+      greater = false;
+    }
+  }
+  if (equal) return EQUAL;
+  if (greater && !smaller) return GREATER;
+  if (!greater && smaller) return SMALLER;
+  return SIMULTANEOUS;
 }
 
 vector_clock vector_clock::merge(const vector_clock& other) {
@@ -58,4 +91,8 @@ vector_clock vector_clock::merge(const vector_clock& other) {
     map_[key] = std::max(map_[key], e.second);
   }
   return {std::move(delta)};
+}
+
+size_t vector_clock::count(const actor& slot) const {
+  return map_.count(slot);
 }
