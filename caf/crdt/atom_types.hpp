@@ -5,9 +5,8 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
- * Marian Triebe <marian.triebe (at) haw-hamburg.de>                          *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -32,34 +31,34 @@ namespace crdt {
 using notify_atom = atom_constant<atom("notify")>;
 
 /// Send to replicator to read states from a majority of nodes
-using read_majority_atom = atom_constant<atom("readmajor")>;
+using read_majority_atom = atom_constant<atom("readMajor")>;
 
 /// Send to replicator to read states from all nodes
-using read_all_atom = atom_constant<atom("readall")>;
+using read_all_atom = atom_constant<atom("readAll")>;
 
 /// Send to replicator to read only local nodes state
-using read_local_atom = atom_constant<atom("readlocal")>;
+using read_local_atom = atom_constant<atom("readLocal")>;
 
 /// Send to replicator to write to a majority of nodes
-using write_majority_atom = atom_constant<atom("writemajor")>;
+using write_majority_atom = atom_constant<atom("writeMajor")>;
 
 /// Send to replicator to write to all nodes
-using write_all_atom = atom_constant<atom("writeall")>;
+using write_all_atom = atom_constant<atom("writeAll")>;
 
 /// Send to replicator to write to local node
-using write_local_atom = atom_constant<atom("writelocal")>;
+using write_local_atom = atom_constant<atom("writeLocal")>;
 
 /// Send back if write succeed
-using write_succeed_atom = atom_constant<atom("wsuccceed")>;
+using write_succeed_atom = atom_constant<atom("wSuccceed")>;
 
 /// Send back if read succeed
-using read_succeed_atom = atom_constant<atom("rsucceed")>;
+using read_succeed_atom = atom_constant<atom("rSucceed")>;
 
 /// Send back if write failed
-using write_failed_atom = atom_constant<atom("wfailed")>;
+using write_failed_atom = atom_constant<atom("wFailed")>;
 
 /// Send back if read failed
-using read_failed_atom = atom_constant<atom("rfailed")>;
+using read_failed_atom = atom_constant<atom("rFailed")>;
 
 // -------- Internal atoms -----------------------------------------------------
 
@@ -67,33 +66,31 @@ using read_failed_atom = atom_constant<atom("rfailed")>;
 using replicator_atom = atom_constant<atom("replicator")>;
 
 /// @private
-using tick_state_atom = atom_constant<atom("fstate")>;
+using tick_state_atom = atom_constant<atom("tickState")>;
 
 /// @private
-using tick_topics_atom = atom_constant<atom("ftopics")>;
+using tick_ids_atom = atom_constant<atom("tickIds")>;
 
 /// @private
 using shutdown_atom = atom_constant<atom("shutdown")>;
 
-// -------- Replicator communication atoms -------------------------------------
+/// @private
+using copy_atom = atom_constant<atom("copyAtom")>;
 
 /// @private
-using copy_atom = atom_constant<atom("copyatom")>;
+using copy_ack_atom = atom_constant<atom("copyAck")>;
 
 /// @private
-using copy_ack_atom = atom_constant<atom("copyack")>;
+using new_connection_atom = atom_constant<atom("newCon")>;
 
 /// @private
-using new_connection_atom = atom_constant<atom("newcon")>;
+using connection_lost_atom = atom_constant<atom("conLost")>;
 
 /// @private
-using connection_lost_atom = atom_constant<atom("conlost")>;
+using get_ids_atom = atom_constant<atom("getIds")>;
 
 /// @private
-using get_ids_atom = atom_constant<atom("getids")>;
-
-/// @private
-using delete_id_atom = atom_constant<atom("delid")>;
+using delete_id_atom = atom_constant<atom("delId")>;
 
 } // namespace crdt
 } // namespace caf

@@ -5,9 +5,8 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
- * Marian Triebe <marian.triebe (at) haw-hamburg.de>                          *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -25,7 +24,7 @@
 
 #include "caf/crdt/uri.hpp"
 #include "caf/crdt/atom_types.hpp"
-#include "caf/crdt/notifyable.hpp"
+#include "caf/crdt/notifiable.hpp"
 #include "caf/crdt/replicator_actor.hpp"
 
 #include <unordered_set>
@@ -34,36 +33,32 @@ namespace caf {
 namespace crdt {
 namespace detail {
 
-namespace {
-
 ///
 template <class T>
 struct wr_state {
   size_t messages_left;
   T crdt;
-  actor respond_to;
   response_promise rp;
 };
 
 ///
 template <class T>
 behavior writer(stateful_actor<wr_state<T>>* self) {
-  auto init = [=](size_t msgs_left, actor respond) {
+  auto init = [=](size_t msgs_left) {
     self->state.messages_left = msgs_left;
-    self->state.respond_to = respond;
     self->state.rp = self->make_response_promise();
   };
   return {
     [=](write_all_atom, const uri& u, std::set<replicator_actor> to,
         const message& msg) {
-      init(to.size(), actor_cast<actor>(self->current_sender()));
+      init(to.size());
       for (auto& rep : to)
         self->send(rep, write_local_atom::value, u, msg);
     },
     [=](write_majority_atom, const uri& u, std::set<replicator_actor> to,
         const message& msg) {
       auto n = to.size() / 2 + 1;
-      init(n, actor_cast<actor>(self->current_sender()));
+      init(n);
       size_t send = 0;
       for (auto& rep : to) {
         self->send(rep, write_local_atom::value, u, msg);
@@ -81,20 +76,19 @@ behavior writer(stateful_actor<wr_state<T>>* self) {
 ///
 template <class T>
 behavior reader(stateful_actor<wr_state<T>>* self) {
-  auto init = [=](size_t msgs_left, actor respond) {
+  auto init = [=](size_t msgs_left) {
     self->state.messages_left = msgs_left;
-    self->state.respond_to = respond;
     self->state.rp = self->make_response_promise();
   };
   return {
     [=](read_all_atom, const uri& u, std::set<replicator_actor> from) {
-      init(from.size(), actor_cast<actor>(self->current_sender()));
+      init(from.size());
       for (auto& rep : from)
         self->send(rep, read_local_atom::value, u);
     },
     [=](read_majority_atom, const uri& u, std::set<replicator_actor> from) {
       auto n = from.size() / 2 + 1;
-      init(n, actor_cast<actor>(self->current_sender()));
+      init(n);
       size_t send = 0;
       for (auto& rep : from) {
         self->send(rep, read_local_atom::value, u);
@@ -110,18 +104,17 @@ behavior reader(stateful_actor<wr_state<T>>* self) {
   };
 }
 
-} // namespace <anonymous>
-
 ///
 template <class T>
-struct replica : public event_based_actor {
-  replica(actor_config& cfg, const uri& topic)
-      : event_based_actor(cfg), topic_{topic} {
+class replica : public event_based_actor {
+public:
+  replica(actor_config& cfg, const uri& id)
+      : event_based_actor(cfg), id_{id} {
     // nop
   }
 
 protected:
-  virtual behavior make_behavior() override {
+  behavior make_behavior() override {
     return {
       [&](publish_atom, message& msg) {
         T unpacked;
@@ -147,7 +140,7 @@ protected:
       },
       [&](copy_atom) {
         send(system().replicator().actor_handle(),
-             copy_ack_atom::value, topic_, make_message(cvrdt_));
+             copy_ack_atom::value, id_, make_message(cvrdt_));
       },
       [&](read_all_atom, const uri& u, std::set<replicator_actor> from) {
         from.emplace(this->system().replicator().actor_handle());
@@ -183,7 +176,7 @@ protected:
 
 private:
   T cvrdt_;                        /// CRDT State (complete state)
-  uri topic_;                      /// Topic
+  uri id_;                         /// Replic-ID
   std::unordered_set<actor> subs_; /// Subscribers
 };
 

@@ -5,9 +5,8 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
- * Marian Triebe <marian.triebe (at) haw-hamburg.de>                          *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -35,19 +34,7 @@ namespace types {
 
 /// Implementation of a grow-only counter (GCounter)
 template <class T>
-struct gcounter : public base_datatype {
-  using interface = notifyable<gcounter<T>>;
-  using base = typename notifyable<gcounter<T>>::base;
-  using behavior_type = typename notifyable<gcounter<T>>::behavior_type;
-
-  gcounter() = default;
-
-  template <class ActorType>
-  gcounter(ActorType&& owner, std::string topic)
-    : base_datatype(std::forward<ActorType>(owner), std::move(topic)) {
-    // nop
-  }
-
+class gcounter : public base_datatype {
   ///
   gcounter(std::unordered_map<actor, T> map) : map_(std::move(map)) {
     // nop
@@ -56,6 +43,19 @@ struct gcounter : public base_datatype {
   ///
   gcounter(actor key, T value) {
     map_.emplace(key, value);
+  }
+
+public:
+  using interface = notifiable<gcounter<T>>;
+  using base = typename notifiable<gcounter<T>>::base;
+  using behavior_type = typename notifiable<gcounter<T>>::behavior_type;
+
+  gcounter() = default;
+
+  template <class ActorType>
+  gcounter(ActorType&& owner, std::string id)
+    : base_datatype(std::forward<ActorType>(owner), std::move(id)) {
+    // nop
   }
 
   ///
@@ -72,21 +72,22 @@ struct gcounter : public base_datatype {
 
   ///
   inline T count() const {
-    T result = 0;
-    for (auto& elem : map_)
-      result += elem.second;
-    return result;
+    auto binary_op = [](T value, const std::pair<actor, T>& p) {
+      return value + p.second;
+    };
+    return std::accumulate(map_.begin(), map_.end(), 0, binary_op);
   }
 
-  /// Merge function, for this type it is simple
+  /// Merges two CRDT instances
   /// @param other delta-CRDT to merge into this
   /// @returns a delta gcounter<T>
   gcounter<T> merge(const gcounter<T>& other) {
     std::unordered_map<actor, T> delta;
     for (auto& elem : other.map_) {
-      auto key = elem.first;
-      if (map_[key] < elem.second) {
-        map_[key] = elem.second;
+      auto& key = elem.first;
+      auto& value = map_[key];
+      if (value < elem.second) {
+        value = elem.second;
         delta.emplace(key, elem.second);
       }
     }

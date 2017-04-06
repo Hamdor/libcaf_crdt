@@ -5,9 +5,8 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
- * Marian Triebe <marian.triebe (at) haw-hamburg.de>                          *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -38,8 +37,8 @@ namespace crdt {
 namespace {
 
 /// Implementation of replicator actor
-struct replicator_actor_impl : public replicator_actor::base {
-
+class replicator_actor_impl : public replicator_actor::base {
+public:
   replicator_actor_impl(actor_config& cfg)
       : replicator_actor::base(cfg), dist(this) {
     // nop
@@ -52,13 +51,13 @@ struct replicator_actor_impl : public replicator_actor::base {
 protected:
   behavior_type make_behavior() override {
     send(this, tick_state_atom::value);
-    send(this, tick_topics_atom::value);
+    send(this, tick_ids_atom::value);
     return {
       // ---
-      [&](uri& topic, const message& msg) {
+      [&](uri& id, const message& msg) {
         if (current_sender()->node() == this->node())
-          dist.publish(topic, msg); // Remote send message
-        delegate(find_actor(topic), publish_atom::value, msg);
+          dist.publish(id, msg); // Remote send message
+        delegate(find_actor(id), publish_atom::value, msg);
       },
       [&](tick_state_atom) {
         // All states have to send their state to the replicator
@@ -66,13 +65,13 @@ protected:
           anon_send(state.second, copy_atom::value);
         delayed_send(this, std::chrono::seconds(1), tick_state_atom::value);
       },
-      [&](copy_ack_atom, const uri& u, const message& msg) {
-        dist.publish(u, msg);
+      [&](copy_ack_atom, uri& u, message& msg) {
+        dist.publish(std::move(u), std::move(msg));
       },
-      [&](tick_topics_atom) {
-        dist.pull_topics();
+      [&](tick_ids_atom) {
+        dist.pull_ids();
         delayed_send(this, std::chrono::seconds(1),
-                     tick_topics_atom::value);
+                     tick_ids_atom::value);
       },
       // ---
       [&](new_connection_atom, const node_id& node) {
@@ -82,10 +81,10 @@ protected:
         dist.remove_node(nid);
       },
       [&](get_ids_atom, size_t seen) {
-        dist.get_topics(current_sender()->node(), seen);
+        dist.get_ids(current_sender()->node(), seen);
       },
-      [&](size_t version, std::unordered_set<uri>& topics) {
-        dist.update(current_sender()->node(), version, std::move(topics));
+      [&](size_t version, std::unordered_set<uri>& ids) {
+        dist.update(current_sender()->node(), version, std::move(ids));
       },
       // --- Subscribe & Unsubscribe
       [&](subscribe_atom, const uri& u) {
@@ -126,7 +125,7 @@ private:
     if (iter == states_.end()) {
       auto opt = system().spawn<actor>(u.scheme(), make_message(u));
       iter = states_.emplace(u, *opt).first;
-      dist.add_topic(u);
+      dist.add_id(u);
     }
     return iter->second;
   }

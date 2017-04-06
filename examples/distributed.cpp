@@ -5,9 +5,8 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
- * Marian Triebe <marian.triebe (at) haw-hamburg.de>                          *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -32,7 +31,8 @@ constexpr int inc_by   = 10;
 constexpr int number_of_nodes = 2;
 constexpr int expected = nr_spawn * inc_by * number_of_nodes;
 
-struct port_dummy : public event_based_actor {
+class port_dummy : public event_based_actor {
+public:
   using event_based_actor::event_based_actor;
 };
 
@@ -45,7 +45,7 @@ public:
   }
 
 protected:
-  typename types::gcounter<int>::behavior_type make_behavior() override {
+  types::gcounter<int>::behavior_type make_behavior() override {
     state_.increment_by(inc_by);
     return {
       [&](notify_atom, const types::gcounter<int>& t) {
@@ -65,17 +65,17 @@ private:
 class config : public crdt_config {
 public:
   config() {
+    load<io::middleman>();
     add_crdt<types::gcounter<int>>("gcounter<int>");
   }
 };
 
 void caf_main(actor_system& system, const config&) {
   config conf{};
-  conf.load<io::middleman>().load<crdt::replicator>();
   actor_system system2{conf};
   // -- Publish two dummies
   auto port1 = *system.middleman().publish(system.spawn<port_dummy>(), 0);
-  auto port2 = *system2.middleman().publish(system.spawn<port_dummy>(), 0);
+  auto port2 = *system2.middleman().publish(system2.spawn<port_dummy>(), 0);
   std::this_thread::sleep_for(std::chrono::seconds(1));
   // ----------------------
   // -- Connect to nodes
@@ -84,10 +84,10 @@ void caf_main(actor_system& system, const config&) {
     self->send(system.middleman().actor_handle(), connect_atom::value,
                "127.0.0.1", port2);
     scoped_actor self2{system2};
-    self2->send(system.middleman().actor_handle(), connect_atom::value,
+    self2->send(system2.middleman().actor_handle(), connect_atom::value,
                 "127.0.0.1", port1);
   }
-  std::this_thread::sleep_for(std::chrono::seconds(1));
+  std::this_thread::sleep_for(std::chrono::seconds(2));
   // ----------------------
   for (int i = 0; i < nr_spawn; ++i) {
     system.spawn<incrementer>();

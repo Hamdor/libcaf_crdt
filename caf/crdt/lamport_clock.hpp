@@ -9,8 +9,9 @@ namespace caf {
 namespace crdt {
 
 /// Implementation of a lamport clock
-struct lamport_clock : caf::detail::comparable<lamport_clock>,
-                       caf::detail::comparable<lamport_clock, uint64_t> {
+class lamport_clock : caf::detail::comparable<lamport_clock>,
+                      caf::detail::comparable<lamport_clock, uint64_t> {
+public:
   lamport_clock() : time_{0} {
     // nop
   }
@@ -26,17 +27,12 @@ struct lamport_clock : caf::detail::comparable<lamport_clock>,
   }
 
   /// @returns the current time
-  uint64_t time() const { return time_; }
+  uint64_t operator*() const { return time_; }
 
   /// @returns post-increment internal time and returns its value
-  uint64_t increment() { return ++time_; }
+  uint64_t operator++() { return ++time_; }
 
   /// @cond PRIVATE
-
-  intptr_t compare(uint64_t lhs, uint64_t rhs) const noexcept {
-    return lhs - rhs;
-  }
-
   intptr_t compare(const lamport_clock& other) const noexcept {
     return compare(time_, other.time_);
   }
@@ -52,6 +48,10 @@ struct lamport_clock : caf::detail::comparable<lamport_clock>,
   }
 
 private:
+  static intptr_t compare(uint64_t lhs, uint64_t rhs) noexcept {
+    return lhs - rhs;
+  }
+
   uint64_t time_;
 };
 

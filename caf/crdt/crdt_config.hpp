@@ -5,7 +5,7 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
  * Marian Triebe <marian.triebe (at) haw-hamburg.de>
  *                                                                            *
@@ -29,7 +29,8 @@ namespace caf {
 namespace crdt {
 
 /// Extended `actor_system_config` to support the CRDT module.
-struct crdt_config : public virtual actor_system_config {
+class crdt_config : public actor_system_config {
+public:
   crdt_config() : actor_system_config() {
     load<crdt::replicator>();
   }

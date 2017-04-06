@@ -5,9 +5,8 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
- * Marian Triebe <marian.triebe (at) haw-hamburg.de>                          *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -27,8 +26,7 @@
 
 #include "caf/crdt/replicator.hpp"
 
-#include "caf/crdt/detail/register_types.hpp"
-#include "caf/crdt/detail/replicator_hooks.hpp"
+#include "caf/crdt/detail/replicator_hook.hpp"
 
 #include <exception>
 
@@ -43,7 +41,6 @@ void replicator::start() {
 }
 
 void replicator::stop() {
-  system_.registry().erase(replicator_atom::value);
   scoped_actor self{system(), true};
   self->monitor(manager_);
   self->send_exit(manager_, exit_reason::user_shutdown);
@@ -52,12 +49,9 @@ void replicator::stop() {
 }
 
 void replicator::init(actor_system_config& cfg) {
-  // TODO: Add all message types... and remove outdated
-  cfg.add_hook_type<detail::replicator_hooks>().
-      add_message_type<std::unordered_map<std::string, message>>("merged_updates").
-      add_message_type<std::unordered_map<std::string, std::vector<message>>>("unmerged_messages");
-  // Default supportet replica types
-  detail::register_types{cfg}();
+  cfg.add_hook_type<detail::replicator_hook>().
+      add_message_type<uri>("uri").
+      add_message_type<std::unordered_set<uri>>("unordered_set<uri>");
 }
 
 actor_system::module::id_t replicator::id() const {

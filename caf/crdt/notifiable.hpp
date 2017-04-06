@@ -5,9 +5,8 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
- * Marian Triebe <marian.triebe (at) haw-hamburg.de>                          *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -18,8 +17,8 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_CRDT_NOTIFYABLE_HPP
-#define CAF_CRDT_NOTIFYABLE_HPP
+#ifndef CAF_CRDT_NOTIFIABLE_HPP
+#define CAF_CRDT_NOTIFIABLE_HPP
 
 #include "caf/typed_actor.hpp"
 
@@ -31,11 +30,9 @@ namespace crdt {
 /// Interface definition for actors which work with CRDT States and support
 /// notifications.
 template <class State>
-using notifyable = typed_actor<
-  reacts_to<notify_atom, State>
->;
+using notifiable = typed_actor<reacts_to<notify_atom, State>>;
 
 } // namespace crdt
 } // namespace caf
 
-#endif // CAF_CRDT_NOTIFYABLE_HPP
+#endif // CAF_CRDT_NOTIFIABLE_HPP

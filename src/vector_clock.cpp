@@ -5,9 +5,8 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
- * Marian Triebe <marian.triebe (at) haw-hamburg.de>                          *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -36,43 +35,43 @@ size_t vector_clock::get(const actor& key) const {
 }
 
 vector_clock_result vector_clock::compare(const vector_clock& other) const {
-  bool equal = true;
-  bool greater = true;
-  bool smaller = true;
-  for (auto& e : map_) {
-    auto key = e.first;
-    auto value = e.second;
+  bool e = true; // equal
+  bool g = true; // greater
+  bool s = true; // smaller
+  for (auto& entry : map_) {
+    auto key = entry.first;
+    auto value = entry.second;
     if (other.count(key)) {
       if (value < other.get(key)) {
-         equal = false;
-         greater = false;
+         e = false;
+         g = false;
       }
       if (value > other.get(key)) {
-         equal = false;
-         smaller = false;
+         e = false;
+         s = false;
       }
     } else if (value != 0) {
-      equal = false;
-      smaller = false;
+      e = false;
+      s = false;
     }
   }
-  for (auto& e : other.map_) {
-    if (!map_.count(e.first) && e.second != 0) {
-      equal = false;
-      greater = false;
+  for (auto& entry : other.map_) {
+    if (!map_.count(entry.first) && entry.second != 0) {
+      e = false;
+      g = false;
     }
   }
-  if (equal) return EQUAL;
-  if (greater && !smaller) return GREATER;
-  if (!greater && smaller) return SMALLER;
-  return SIMULTANEOUS;
+  if (e) return equal;
+  if (g && !s) return greater;
+  if (!g && s) return smaller;
+  return concurrent;
 }
 
 vector_clock vector_clock::merge(const vector_clock& other) {
   map_type delta;
   // Copy entries into delta which are not in `this`
   auto not_in_other = [&](const value_type& e) {
-    return other.map_.find(e.first) == other.map_.end();
+    return other.map_.count(e.first) == 0;
   };
   std::copy_if(map_.begin(), map_.end(),
                std::inserter(delta, delta.end()), not_in_other);

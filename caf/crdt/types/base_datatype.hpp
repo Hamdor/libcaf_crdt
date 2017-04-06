@@ -5,9 +5,8 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
- * Marian Triebe <marian.triebe (at) haw-hamburg.de>                          *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -34,16 +33,17 @@ namespace crdt {
 namespace types {
 
 ///
-struct base_datatype {
+class base_datatype {
+public:
   /// @private
   base_datatype() = default;
 
   ///
   template <class ActorType>
-  base_datatype(const ActorType& owner, const std::string& topic)
-    : owner_(actor_cast<actor>(owner)), topic_(topic) {
+  base_datatype(const ActorType& owner, const std::string& id)
+    : owner_(actor_cast<actor>(owner)), id_(id) {
     auto hdl = owner_.home_system().replicator().actor_handle();
-    send_as(owner_, hdl, subscribe_atom::value, uri{topic});
+    send_as(owner_, hdl, subscribe_atom::value, uri{id});
   }
 
   virtual ~base_datatype() {
@@ -51,35 +51,30 @@ struct base_datatype {
     // no longer possible nor necessary to unsubscribe
     if (owner_) {
       auto hdl = owner_.home_system().replicator().actor_handle();
-      send_as(owner_, hdl, unsubscribe_atom::value, uri{topic_});
+      send_as(owner_, hdl, unsubscribe_atom::value, uri{id_});
     }
   }
 
-  /// @returns topic of this state
-  inline std::string topic() const { return topic_.str(); }
+  /// @returns id of this state
+  inline std::string id() const { return id_.str(); }
 
   /// @returns the owner of this state
   inline const actor& owner() const { return owner_; }
 
-  /// @private
-  template <class Processor>
-  friend void serialize(Processor& proc, base_datatype& x) {
-    proc & x.topic_;
-  }
-
 protected:
-  ///
+  /// Publishes a delta crdt state to the replicator
+  /// @param data the delta to be pushed to replicator
   template <class Data>
   void publish(const Data& data) const {
     if (!owner_)
       return;
     auto hdl = owner_.home_system().replicator().actor_handle();
-    send_as(owner_, hdl, topic_, make_message(data));
+    send_as(owner_, hdl, id_, make_message(data));
   }
 
 private:
   actor owner_; /// Owner of this state
-  uri topic_;   /// Topic for this datatype
+  uri id_;      /// Replic-ID
 };
 
 } // namespace types

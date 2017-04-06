@@ -5,9 +5,8 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
- * Marian Triebe <marian.triebe (at) haw-hamburg.de>                          *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -36,23 +35,7 @@ namespace types {
 
 /// GSet implementation as delta-CRDT
 template <class T>
-struct gset : public base_datatype,
-              public caf::detail::comparable<gset<T>> {
-
-  using value_type = T;
-  using interface = notifyable<gset<T>>;
-  using base = typename notifyable<gset<T>>::base;
-  using behavior_type = typename notifyable<gset<T>>::behavior_type;
-
-  template <class ActorType>
-  gset(ActorType&& owner, std::string topic)
-    : base_datatype(std::forward<ActorType>(owner), std::move(topic)) {
-    // nop
-  }
-
-  gset() = default;
-
-  gset(const gset&) = default;
+class gset : public base_datatype, caf::detail::comparable<gset<T>> {
 
   gset(const T& elem) : set_{elem} {
     // nop
@@ -62,6 +45,19 @@ struct gset : public base_datatype,
     // nop
   }
 
+public:
+  using value_type = T;
+  using interface = notifiable<gset<T>>;
+  using base = typename notifiable<gset<T>>::base;
+  using behavior_type = typename notifiable<gset<T>>::behavior_type;
+
+  gset() = default;
+
+  template <class ActorType>
+  gset(ActorType&& owner, std::string id)
+    : base_datatype(std::forward<ActorType>(owner), std::move(id)) {
+    // nop
+  }
 
   /// Merge function, for this type it is simple
   /// @param other delta-CRDT to merge into this

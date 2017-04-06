@@ -5,9 +5,8 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
- * Marian Triebe <marian.triebe (at) haw-hamburg.de>                          *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -25,7 +24,7 @@
 #include "caf/actor_system.hpp"
 
 #include "caf/crdt/uri.hpp"
-#include "caf/crdt/notifyable.hpp"
+#include "caf/crdt/notifiable.hpp"
 #include "caf/crdt/replicator_actor.hpp"
 
 #include "caf/crdt/detail/replica.hpp"
@@ -57,6 +56,20 @@ public:
     return system_;
   }
 
+  /// Subscribe to replic changes
+  template <class T>
+  void subscribe(const uri& u, const notifiable<T>& subscriber) {
+    // TODO: Blockierend machen => mit error return
+    send_as(subscriber, manager_, subscribe_atom::value, u);
+  }
+
+  /// Unsubscribe from replic changes
+  template <class T>
+  void unsubscribe(const uri& u, const notifiable<T>& subscriber) {
+    // TODO: Blockierend machen => mit error return
+    send_as(subscriber, manager_, unsubscribe_atom::value, u);
+  }
+
 protected:
   replicator(actor_system&);
   ~replicator();
@@ -64,20 +77,6 @@ protected:
 private:
   actor_system& system_;
   replicator_actor manager_;
-
-public:
-
-  ///
-  template <class T>
-  void subscribe(const uri& u, const notifyable<T>& subscriber) {
-    send_as(subscriber, manager_, subscribe_atom::value, u);
-  }
-
-  ///
-  template <class T>
-  void unsubscribe(const uri& u, const notifyable<T>& subscriber) {
-    send_as(subscriber, manager_, unsubscribe_atom::value, u);
-  }
 };
 
 } // namespace crdt

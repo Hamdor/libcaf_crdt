@@ -5,9 +5,8 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
- * Marian Triebe <marian.triebe (at) haw-hamburg.de>                          *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -31,10 +30,10 @@ namespace crdt {
 /// Return type for vector clock compares
 /// @relates `vector_clock`
 enum vector_clock_result {
-  GREATER,
-  EQUAL,
-  SMALLER,
-  SIMULTANEOUS
+  greater,
+  equal,
+  smaller,
+  concurrent
 };
 
 /// Vector clock implementation for tracking events with vector timestamps
@@ -75,10 +74,10 @@ public:
 
   /// Compare two vector clocks and return a value of `vector_clock_result`
   /// @param other `vector_clock` to compare to
-  /// @returns `GREATER` if `other` is greater                 this < other
-  ///          `EQUAL`   if `other` is equal to `this`         this == other
-  ///          `SMALLER` if `other` is smaller                 this > other
-  ///          `SIMULTANEOUS` if there are concurrent events   this || other
+  /// @returns `greater` if `other` is greater                 this < other
+  ///          `equal`   if `other` is equal to `this`         this == other
+  ///          `smaller` if `other` is smaller                 this > other
+  ///          `concurrent` if there are concurrent events   this || other
   vector_clock_result compare(const vector_clock& other) const;
 
   /// Merges to `other` into `this` and returns the delta

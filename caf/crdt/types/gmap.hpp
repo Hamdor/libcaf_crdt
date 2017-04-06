@@ -5,9 +5,8 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
- * Marian Triebe <marian.triebe (at) haw-hamburg.de>                          *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -31,10 +30,14 @@ namespace types {
 
 /// Grow-only Map (GMap)
 template <class Key, class Value>
-struct gmap : public base_datatype {
+class gmap : public base_datatype {
+  /// @private
+  gmap(const Key& k, const Value& v) {
+    map_.emplace(k, v);
+  }
 
+public:
   using Container = std::map<Key, Value>;
-
   using const_iterator = typename Container::const_iterator;
   using key_type = typename Container::key_type;
   using mapped_type = typename Container::mapped_type;
@@ -45,30 +48,21 @@ struct gmap : public base_datatype {
 
   ///
   template <class ActorType>
-  gmap(ActorType&& owner, std::string topic)
-    : base_datatype(std::forward<ActorType>(owner), std::move(topic)) {
+  gmap(ActorType&& owner, std::string id)
+    : base_datatype(std::forward<ActorType>(owner), std::move(id)) {
     // nop
   }
-
-private:
-
-  /// @private
-  gmap(const Key& k, const Value& v) {
-    map_.emplace(k, v);
-  }
-
-public:
 
   gmap merge(const gmap& other) {
     Container delta;
     for (auto& entry : other.map_) {
       auto& key = entry.first;
-      auto& value = entry.second;
-      if (map_[key] < value) {
-        map_[key] = value;
+      auto& value = map_[key];
+      if (value < entry.second) {
+        value = entry.second;
+        delta.emplace(key, entry.second);
+      } else if (value > entry.second)
         delta.emplace(key, value);
-      } else if (map_[key] > value)
-        delta.emplace(key, map_[key]);
     }
     return {std::move(delta)};
   }
@@ -90,7 +84,7 @@ public:
   optional<Value> get(const Key& key) const {
     auto iter = map_.find(key);
     if (iter == map_.end())
-      return empty;
+      return none;
     return iter->second;
   }
 

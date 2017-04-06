@@ -5,9 +5,8 @@
  *                     | |___ / ___ \|  _|      Framework                     *
  *                      \____/_/   \_|_|                                      *
  *                                                                            *
- * Copyright (C) 2011 - 2016                                                  *
+ * Copyright (C) 2011 - 2017                                                  *
  * Dominik Charousset <dominik.charousset (at) haw-hamburg.de>                *
- * Marian Triebe <marian.triebe (at) haw-hamburg.de>                          *
  *                                                                            *
  * Distributed under the terms and conditions of the BSD 3-Clause License or  *
  * (at your option) under the terms and conditions of the Boost Software      *
@@ -18,38 +17,41 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_CRDT_DETAIL_REGISTER_TYPES_HPP
-#define CAF_CRDT_DETAIL_REGISTER_TYPES_HPP
+#ifndef CAF_CRDT_DETAIL_REPLICATOR_HOOK_HPP
+#define CAF_CRDT_DETAIL_REPLICATOR_HOOK_HPP
 
-#include "caf/actor_system_config.hpp"
+#include "caf/scoped_actor.hpp"
 
-#include "caf/crdt/types/all.hpp"
-
-#include "caf/crdt/detail/replica.hpp"
-
-#include "caf/crdt/detail/distribution_layer.hpp"
+#include "caf/io/hook.hpp"
 
 namespace caf {
 namespace crdt {
 namespace detail {
 
-struct register_types {
+/// IO-Hooks used by replicator
+class replicator_hook : public io::hook {
+public:
+  replicator_hook(actor_system& sys);
 
-  register_types(actor_system_config& cfg) : cfg_(cfg) {
-    // nop
-  }
+  /// Called whenever a handshake via a direct TCP connection succeeded.
+  void new_connection_established_cb(const node_id& dest) override;
 
-  void operator()() noexcept {
-    cfg_.add_message_type<uri>("uri");
-    cfg_.add_message_type<std::unordered_set<uri>>("unordered_set<uri>");
-  }
+  /// Called whenever a message from or to a yet unknown node was received.
+  void new_route_added_cb(const node_id&, const node_id& node) override;
+
+  /// Called whenever a direct connection was lost.
+  void connection_lost_cb(const node_id& dest) override;
 
 private:
-  actor_system_config& cfg_;
+
+  void new_connection(const node_id& node);
+
+  scoped_actor self_;
+  actor_system& sys_;
 };
 
 } // namespace detail
 } // namespace crdt
 } // namespace caf
 
-#endif // CAF_CRDT_DETAIL_REGISTER_TYPES_HPP
+#endif // CAF_CRDT_DETAIL_REPLICATOR_HOOK_HPP
