@@ -130,17 +130,22 @@ public:
     else                        return 1;
   }
 
+  inline size_t empty() const { return set_.empty(); }
+
+  inline typename std::set<T>::const_iterator cbegin() const {
+    return set_.cbegin();
+  }
+
+  inline typename std::set<T>::const_iterator cend() const {
+    return set_.cend();
+  }
+
 private:
   /// @private
   inline bool internal_emplace(const T& elem) {
     return std::get<1>(set_.emplace(elem));
   }
   std::set<T> set_; /// Set of elements
-
-public:
-  auto empty() -> decltype(set_.empty()) { return set_.empty(); }
-  auto cbegin() -> decltype(set_.cbegin()) { return set_.cbegin(); }
-  auto cend() -> decltype(set_.cend()) { return set_.cend(); }
 };
 
 } // namespace types
