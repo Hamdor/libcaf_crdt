@@ -21,6 +21,7 @@
 
 #include "caf/message.hpp"
 #include "caf/node_id.hpp"
+#include "caf/actor_system_config.hpp"
 #include "caf/typed_event_based_actor.hpp"
 
 #include "caf/io/middleman.hpp"
@@ -38,9 +39,18 @@ namespace {
 
 /// Implementation of replicator actor
 class replicator_actor_impl : public replicator_actor::base {
+  using interval_res = std::chrono::milliseconds;
 public:
-  replicator_actor_impl(actor_config& cfg)
-      : replicator_actor::base(cfg), dist(this) {
+  replicator_actor_impl(actor_config& cfg, size_t notify_interval_ms,
+                        size_t flush_buffer_interval_ms,
+                        size_t state_interval_ms,
+                        size_t flush_ids_ms)
+      : replicator_actor::base(cfg),
+        dist_{this},
+        notify_interval_ms_{notify_interval_ms},
+        flush_buffer_interval_ms_{flush_buffer_interval_ms},
+        state_interval_ms_{state_interval_ms},
+        flush_ids_ms_{flush_ids_ms} {
     // nop
   }
 
@@ -57,38 +67,38 @@ protected:
       // ---
       [&](uri& id, const message& msg) {
         if (current_sender()->node() == this->node())
-          dist.publish(id, msg); // Remote send message
+          dist_.publish(id, msg); // Remote send message
         delegate(find_actor(id), publish_atom::value, msg);
       },
       [&](tick_state_atom& atm) {
         // All states have to send their state to the replicator
         for (auto& state : states_)
           anon_send(state.second, copy_atom::value);
-        delayed_send(this, std::chrono::seconds(1), atm);
+        delayed_send(this, interval_res(state_interval_ms_), atm);
       },
       [&](copy_ack_atom, uri& u, message& msg) {
-        dist.publish(std::move(u), std::move(msg));
+        dist_.publish(std::move(u), std::move(msg));
       },
       [&](tick_ids_atom& atm) {
-        dist.pull_ids();
-        delayed_send(this, std::chrono::seconds(1), atm);
+        dist_.pull_ids();
+        delayed_send(this, interval_res(flush_ids_ms_), atm);
       },
       [&](tick_buffer_atom& atm) {
-        dist.flush_buffer();
-        delayed_send(this, std::chrono::seconds(1), atm);
+        dist_.flush_buffer();
+        delayed_send(this, interval_res(flush_buffer_interval_ms_), atm);
       },
       // ---
       [&](new_connection_atom, const node_id& node) {
-        dist.add_new_node(node);
+        dist_.add_new_node(node);
       },
       [&](connection_lost_atom, const node_id& nid) {
-        dist.remove_node(nid);
+        dist_.remove_node(nid);
       },
       [&](get_ids_atom, size_t seen) {
-        dist.get_ids(current_sender()->node(), seen);
+        dist_.get_ids(current_sender()->node(), seen);
       },
       [&](size_t version, std::unordered_set<uri>& ids) {
-        dist.update(current_sender()->node(), version, std::move(ids));
+        dist_.update(current_sender()->node(), version, std::move(ids));
       },
       // --- Subscribe & Unsubscribe
       [&](subscribe_atom, const uri& u) {
@@ -99,22 +109,22 @@ protected:
       },
       // -- Read & Write Consistencies
       [&](read_all_atom, const uri& u) {
-        delegate(find_actor(u), read_all_atom::value, u, dist.get_intrested(u));
+        delegate(find_actor(u), read_all_atom::value, u, dist_.get_intrested(u));
       },
       [&](read_majority_atom, const uri& u) {
         delegate(find_actor(u), read_majority_atom::value, u,
-                 dist.get_intrested(u));
+                 dist_.get_intrested(u));
       },
       [&](read_local_atom, const uri& u) {
         delegate(find_actor(u), read_local_atom::value);
       },
       [&](write_all_atom, const uri& u, const message& msg) {
         delegate(find_actor(u), write_all_atom::value, u,
-                 dist.get_intrested(u), msg);
+                 dist_.get_intrested(u), msg);
       },
       [&](write_majority_atom, const uri& u, const message& msg) {
         delegate(find_actor(u), write_majority_atom::value, u,
-                 dist.get_intrested(u), msg);
+                 dist_.get_intrested(u), msg);
       },
       [&](write_local_atom, const uri& u, const message& msg) {
         delegate(find_actor(u), write_local_atom::value, msg);
@@ -127,22 +137,31 @@ private:
   actor find_actor(const uri& u) {
     auto iter = states_.find(u);
     if (iter == states_.end()) {
-      auto opt = system().spawn<actor>(u.scheme(), make_message(u));
+      auto args = make_message(u, notify_interval_ms_);
+      auto opt = system().spawn<actor>(u.scheme(), std::move(args));
       iter = states_.emplace(u, *opt).first;
-      dist.add_id(u);
+      dist_.add_id(u);
     }
     return iter->second;
   }
-  ///
-  std::unordered_map<uri, actor> states_;
-  /// Organize distribution of updates
-  detail::distribution_layer dist;
+
+  std::unordered_map<uri, actor> states_; /// Maps from uri to replica<T>
+  detail::distribution_layer dist_;       /// Organize dist_ribution of updates
+  size_t notify_interval_ms_;             /// Notify interval in milliseconds
+  size_t flush_buffer_interval_ms_;       /// Flush interval in milliseconds
+  size_t state_interval_ms_;              /// State interval in milliseconds
+  size_t flush_ids_ms_;                   /// Replic-ID reconciliation interval
 };
 
 } // namespace <anonymous>
 
 replicator_actor make_replicator_actor(actor_system& sys) {
-  return sys.spawn<replicator_actor_impl, hidden>();
+  return sys.spawn<replicator_actor_impl, hidden>(
+    sys.config().crdt_notify_interval_ms,
+    sys.config().crdt_flush_buffer_interval_ms,
+    sys.config().crdt_state_interval_ms,
+    sys.config().crdt_ids_interval_ms
+  );
 }
 
 } // namespace crdt

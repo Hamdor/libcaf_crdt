@@ -108,13 +108,15 @@ behavior reader(stateful_actor<wr_state<T>>* self) {
 template <class T>
 class replica : public event_based_actor {
 public:
-  replica(actor_config& cfg, const uri& id)
-      : event_based_actor(cfg), id_{id} {
+  replica(actor_config& cfg, const uri& id, size_t notify_interval_ms)
+      : event_based_actor(cfg), id_{id},
+        notify_interval_ms_{notify_interval_ms} {
     // nop
   }
 
 protected:
   behavior make_behavior() override {
+    send(this, notify_atom::value);
     return {
       [&](publish_atom, message& msg) {
         T unpacked;
@@ -124,9 +126,13 @@ protected:
         auto delta = cvrdt_.merge(unpacked);
         if (delta.empty())
           return; // State was already included
+        buffer_.merge(delta);
+      },
+      [&](notify_atom& atm) {
         for (auto& sub : subs_)
-          if (sub != current_sender())
-            send(sub, notify_atom::value, unpacked);
+          send(sub, notify_atom::value, buffer_);
+        delayed_send(this, std::chrono::milliseconds(notify_interval_ms_), atm);
+        buffer_ = {}; // reset buffer
       },
       [&](subscribe_atom) {
         auto handle = actor_cast<actor>(current_sender());
@@ -176,7 +182,9 @@ protected:
 
 private:
   T cvrdt_;                        /// CRDT State (complete state)
+  T buffer_;                       /// delta-Buffer for subscribers
   uri id_;                         /// Replic-ID
+  size_t notify_interval_ms_;      /// Notify interval
   std::unordered_set<actor> subs_; /// Subscribers
 };
 
