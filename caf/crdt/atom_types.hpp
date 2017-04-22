@@ -72,6 +72,9 @@ using tick_state_atom = atom_constant<atom("tickState")>;
 using tick_ids_atom = atom_constant<atom("tickIds")>;
 
 /// @private
+using tick_buffer_atom = atom_constant<atom("tickBuf")>;
+
+/// @private
 using shutdown_atom = atom_constant<atom("shutdown")>;
 
 /// @private

@@ -43,6 +43,8 @@ class distribution_layer {
   };
 
   using map_type = std::unordered_map<node_id, node_data>;
+  using buffer_type = std::unordered_map<uri, std::vector<message>>;
+  using uri_to_nodeid_type = std::unordered_map<uri, std::set<node_id>>;
 
 public:
   /// Construct a distribution layer
@@ -70,6 +72,8 @@ public:
   /// @param nid node to remove
   void remove_node(const node_id& nid) {
     store_.erase(nid);
+    for (auto& entry : uri_to_nodes_)
+      entry.second.erase(nid);
   }
 
   /// Update a map entry
@@ -80,8 +84,13 @@ public:
               std::unordered_set<uri>&& ids) {
     auto& data = store_[nid];
     if (version > data.version) {
+      // Remove old ids from mapping
+      for (auto& u : data.filter) uri_to_nodes_[u].erase(nid);
+      // Set new values (uris, version)
       data.filter = std::move(ids);
       data.version = version;
+      // Add new ids to mapping
+      for (auto& u : data.filter) uri_to_nodes_[u].emplace(nid);
     }
   }
 
@@ -121,14 +130,25 @@ public:
     send_as(impl_, data.replicator, local_.version, local_.filter);
   }
 
-  /// Flush updates to intrested remote nodes.
+  /// Add update into update buffer
   /// @param id of update as uri
   /// @param msg containing the update
-  void publish(const uri& id, const message& msg) const {
-    for (auto& entry : store_) {
-      auto& set = entry.second.filter;
-      if (set.find(id) != set.end())
-        send_as(impl_, entry.second.replicator, id, msg);
+  void publish(const uri& id, const message& msg) {
+    buffer_[id].emplace_back(msg);
+  }
+
+  /// Flushes the update buffer
+  void flush_buffer() {
+    for (auto& entry : buffer_) {
+      auto& id  = entry.first;
+      auto& set = entry.second;
+      auto& intrested_nodes = uri_to_nodes_[id];
+      for (auto& node : intrested_nodes) {
+        auto& repl = store_[node].replicator;
+        for (auto& elem : set)
+          send_as(impl_, repl, id, elem);
+      }
+      set.clear();
     }
   }
 
@@ -151,8 +171,10 @@ private:
   }
 
   actor impl_;
-  node_data local_;
-  map_type store_;
+  node_data local_;        /// Information of local node
+  map_type store_;         /// Information of remote nodes (node_id => node_data)
+  uri_to_nodeid_type uri_to_nodes_; /// Maps uris to set of nodes
+  buffer_type buffer_;     /// Buffer for delta-CRDTs (uri => set of msgs)
 };
 
 } // namespace detail

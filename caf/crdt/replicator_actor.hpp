@@ -45,6 +45,8 @@ using replicator_actor =
     reacts_to<copy_ack_atom, uri, message>,
     /// Internal tick message to flush ids
     reacts_to<tick_ids_atom>,
+    /// Internal tick message to flush buffer
+    reacts_to<tick_buffer_atom>,
     /// A new connection to a CAF node (node_id) is established
     reacts_to<new_connection_atom, node_id>,
     /// A connection to a CAF node (node_id) is lost

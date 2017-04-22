@@ -50,6 +50,7 @@ public:
 
 protected:
   behavior_type make_behavior() override {
+    send(this, tick_buffer_atom::value);
     send(this, tick_state_atom::value);
     send(this, tick_ids_atom::value);
     return {
@@ -59,19 +60,22 @@ protected:
           dist.publish(id, msg); // Remote send message
         delegate(find_actor(id), publish_atom::value, msg);
       },
-      [&](tick_state_atom) {
+      [&](tick_state_atom& atm) {
         // All states have to send their state to the replicator
         for (auto& state : states_)
           anon_send(state.second, copy_atom::value);
-        delayed_send(this, std::chrono::seconds(1), tick_state_atom::value);
+        delayed_send(this, std::chrono::seconds(1), atm);
       },
       [&](copy_ack_atom, uri& u, message& msg) {
         dist.publish(std::move(u), std::move(msg));
       },
-      [&](tick_ids_atom) {
+      [&](tick_ids_atom& atm) {
         dist.pull_ids();
-        delayed_send(this, std::chrono::seconds(1),
-                     tick_ids_atom::value);
+        delayed_send(this, std::chrono::seconds(1), atm);
+      },
+      [&](tick_buffer_atom& atm) {
+        dist.flush_buffer();
+        delayed_send(this, std::chrono::seconds(1), atm);
       },
       // ---
       [&](new_connection_atom, const node_id& node) {
