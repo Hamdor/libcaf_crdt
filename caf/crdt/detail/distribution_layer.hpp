@@ -143,11 +143,8 @@ public:
       auto& id  = entry.first;
       auto& set = entry.second;
       auto& intrested_nodes = uri_to_nodes_[id];
-      for (auto& node : intrested_nodes) {
-        auto& repl = store_[node].replicator;
-        for (auto& elem : set)
-          send_as(impl_, repl, id, elem);
-      }
+      for (auto& node : intrested_nodes)
+        send_as(impl_, store_[node].replicator, id, set);
       set.clear();
     }
   }

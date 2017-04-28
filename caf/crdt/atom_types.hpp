@@ -39,6 +39,9 @@ using read_all_atom = atom_constant<atom("readAll")>;
 /// Send to replicator to read only local nodes state
 using read_local_atom = atom_constant<atom("readLocal")>;
 
+/// Send to replicator to write to K nodes
+using write_k_atom = atom_constant<atom("writeK")>;
+
 /// Send to replicator to write to a majority of nodes
 using write_majority_atom = atom_constant<atom("writeMajor")>;
 
@@ -94,6 +97,9 @@ using get_ids_atom = atom_constant<atom("getIds")>;
 
 /// @private
 using delete_id_atom = atom_constant<atom("delId")>;
+
+/// @private
+using timeout_atom = atom_constant<atom("timeout")>;
 
 } // namespace crdt
 } // namespace caf

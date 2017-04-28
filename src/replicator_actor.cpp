@@ -65,10 +65,13 @@ protected:
     send(this, tick_ids_atom::value);
     return {
       // ---
-      [&](uri& id, const message& msg) {
+      [&](uri& id, message& msg) {
         if (current_sender()->node() == this->node())
-          dist_.publish(id, msg); // Remote send message
-        delegate(find_actor(id), publish_atom::value, msg);
+          dist_.publish(id, msg); // Add to send buffer
+        delegate(find_actor(id), publish_atom::value, std::move(msg));
+      },
+      [&](uri& id, std::vector<message>& msgs) {
+        delegate(find_actor(id), publish_atom::value, std::move(msgs));
       },
       [&](tick_state_atom& atm) {
         // All states have to send their state to the replicator
@@ -101,33 +104,30 @@ protected:
         dist_.update(current_sender()->node(), version, std::move(ids));
       },
       // --- Subscribe & Unsubscribe
-      [&](subscribe_atom, const uri& u) {
-        delegate(find_actor(u), subscribe_atom::value);
+      [&](subscribe_atom& atm, const uri& u) {
+        delegate(find_actor(u), atm);
       },
-      [&](unsubscribe_atom, const uri& u) {
-        delegate(find_actor(u), unsubscribe_atom::value);
+      [&](unsubscribe_atom& , const uri& u) {
+        delegate(find_actor(u), atm);
       },
       // -- Read & Write Consistencies
-      [&](read_all_atom, const uri& u) {
-        delegate(find_actor(u), read_all_atom::value, u, dist_.get_intrested(u));
+      [&](read_all_atom& atm, const uri& u) {
+        delegate(find_actor(u), atm, u, dist_.get_intrested(u));
       },
-      [&](read_majority_atom, const uri& u) {
-        delegate(find_actor(u), read_majority_atom::value, u,
-                 dist_.get_intrested(u));
+      [&](read_majority_atom& atm, const uri& u) {
+        delegate(find_actor(u), atm, u, dist_.get_intrested(u));
       },
-      [&](read_local_atom, const uri& u) {
-        delegate(find_actor(u), read_local_atom::value);
+      [&](read_local_atom& atm, const uri& u) {
+        delegate(find_actor(u), atm);
       },
-      [&](write_all_atom, const uri& u, const message& msg) {
-        delegate(find_actor(u), write_all_atom::value, u,
-                 dist_.get_intrested(u), msg);
+      [&](write_all_atom& atm, const uri& u, const message& msg) {
+        delegate(find_actor(u), atm, u, dist_.get_intrested(u), msg);
       },
-      [&](write_majority_atom, const uri& u, const message& msg) {
-        delegate(find_actor(u), write_majority_atom::value, u,
-                 dist_.get_intrested(u), msg);
+      [&](write_majority_atom& atm, const uri& u, const message& msg) {
+        delegate(find_actor(u), atm, u, dist_.get_intrested(u), msg);
       },
-      [&](write_local_atom, const uri& u, const message& msg) {
-        delegate(find_actor(u), write_local_atom::value, msg);
+      [&](write_local_atom& atm, const uri& u, const message& msg) {
+        delegate(find_actor(u), atm, msg);
       }
     };
   }

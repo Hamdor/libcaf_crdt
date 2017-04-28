@@ -20,13 +20,14 @@
 #ifndef CAF_CRDT_TYPES_BASE_DATATYPE_HPP
 #define CAF_CRDT_TYPES_BASE_DATATYPE_HPP
 
-#include <string>
-
+#include "caf/send.hpp"
 #include "caf/message.hpp"
 
 #include "caf/crdt/atom_types.hpp"
 
 #include "caf/actor_ostream.hpp"
+
+#include <string>
 
 namespace caf {
 namespace crdt {

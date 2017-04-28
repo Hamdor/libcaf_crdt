@@ -42,7 +42,7 @@ void replicator::start() {
 
 void replicator::stop() {
   scoped_actor self{system(), true};
-  self->monitor(manager_);
+  //self->monitor(manager_);
   self->send_exit(manager_, exit_reason::user_shutdown);
   self->wait_for(manager_);
   destroy(manager_);
@@ -51,7 +51,8 @@ void replicator::stop() {
 void replicator::init(actor_system_config& cfg) {
   cfg.add_hook_type<detail::replicator_hook>().
       add_message_type<uri>("uri").
-      add_message_type<std::unordered_set<uri>>("unordered_set<uri>");
+      add_message_type<std::unordered_set<uri>>("unordered_set<uri>").
+      add_message_type<std::vector<message>>("vector<message>");
 }
 
 actor_system::module::id_t replicator::id() const {

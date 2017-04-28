@@ -38,6 +38,8 @@ using replicator_actor =
   typed_actor<
     /// Replic-ID, message pair, where the message contains updates for a id
     reacts_to<uri, message>,
+    /// Replic-ID, vector<message> pair
+    reacts_to<uri, std::vector<message>>,
     /// Internal tick message to send complete state, this messages starts the
     /// local collection process of all states.
     reacts_to<tick_state_atom>,

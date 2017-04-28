@@ -19,16 +19,21 @@ public:
   }
 };
 
-void actor_fun(event_based_actor* self) {
-  // Initialize state
-  auto state_ = std::make_shared<gset<int>>(self, "gset<int>://set");
+struct state {
+  state(event_based_actor* self) : crdt(self, "gset<int>://set") {
+    // nop
+  }
+  gset<int> crdt;
+};
+
+void actor_fun(stateful_actor<state>* self) {
   self->become(
     [=](int value) {
-      state_->insert(value);
+      self->state.crdt.insert(value);
     },
     [=](notify_atom, const gset<int>& other) {
-      state_->merge(other);
-      if (state_->size() == assumed_entries) {
+      self->state.crdt.merge(other);
+      if (self->state.crdt.size() == assumed_entries) {
         self->quit();
         aout(self) << "got all entries... exiting...\n";
       }

@@ -89,7 +89,7 @@ public:
     for (auto& elem : elems)
       if (internal_emplace(elem))
         insertions.emplace(elem);
-    this->publish({std::move(insertions)});
+    this->publish(std::set<T>{std::move(insertions)});
   }
 
   /// Checks if `elem` is in the set

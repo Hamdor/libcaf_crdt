@@ -64,9 +64,11 @@ private:
 
 class config : public crdt_config {
 public:
-  config() {
+  config() : crdt_config() {
     load<io::middleman>();
     add_crdt<types::gcounter<int>>("gcounter<int>");
+    set_state_interval(std::chrono::seconds(1));
+    set_flush_interval(std::chrono::seconds(1));
   }
 };
 
@@ -93,6 +95,7 @@ void caf_main(actor_system& system, const config&) {
     system.spawn<incrementer>();
     system2.spawn<incrementer>();
   }
+  std::this_thread::sleep_for(std::chrono::seconds(5));
 }
 
 } // namespace <anonymous>
