@@ -104,10 +104,22 @@ public:
     return std::includes(other.begin(), other.end(), set_.begin(), other.end());
   }
 
+  /// Checks if `other` includes `other`.
+  /// @param other set of elements
+  bool is_subset_of(const gset& other) const {
+    return is_subset_of(other.set_);
+  }
+
   /// Checks if `this` includes `other`.
   /// @param other set of elements
   bool is_superset_of(const std::set<T>& other) const {
     return std::includes(set_.begin(), set_.end(), other.begin(), other.end());
+  }
+
+  /// Checks if `this` includes `other`.
+  /// @param other set of elements
+  bool is_superset_of(const gset& other) const {
+    return is_superset_of(other.set_);
   }
 
   /// Checks if `other` and `this` are equal.
