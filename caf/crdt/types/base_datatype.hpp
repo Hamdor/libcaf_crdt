@@ -62,6 +62,12 @@ public:
   /// @returns the owner of this state
   inline const actor& owner() const { return owner_; }
 
+  /// @warning use only for debugging purpose in unit tests
+  template <class ActorType>
+  inline void set_owner(ActorType&& owner) {
+    owner_ = std::forward<ActorType>(owner);
+  }
+
 protected:
   /// Publishes a delta crdt state to the replicator
   /// @param data the delta to be pushed to replicator
