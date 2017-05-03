@@ -17,13 +17,48 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_CRDT_TYPES_ALL_HPP
-#define CAF_CRDT_TYPES_ALL_HPP
+#define CAF_SUITE mv_register
+#include "caf/test/unit_test.hpp"
 
-#include "caf/crdt/types/gmap.hpp"
-#include "caf/crdt/types/gset.hpp"
-#include "caf/crdt/types/gcounter.hpp"
-#include "caf/crdt/types/mv_register.hpp"
-#include "caf/crdt/types/lww_register.hpp"
+#include "caf/all.hpp"
+#include "caf/crdt/all.hpp"
 
-#endif // CAF_CRDT_TYPES_ALL_HPP
+using namespace caf;
+using namespace caf::crdt;
+using namespace caf::crdt::types;
+
+namespace {
+
+class config : public crdt_config {};
+
+struct fixture {
+  fixture() : system{cfg} {
+    // nop
+  }
+
+  config cfg;
+  actor_system system;
+};
+
+} // namespace <anonymous>
+
+CAF_TEST_FIXTURE_SCOPE(gcounter_tests, fixture)
+
+CAF_TEST(merge) {
+  auto dummy_actor = [](event_based_actor*) {};
+  mv_register<int> lhs, rhs;
+  lhs.set_owner(system.spawn(dummy_actor));
+  rhs.set_owner(system.spawn(dummy_actor));
+  lhs.set(1);
+  CAF_CHECK(lhs.get() == std::set<int>{1});
+  rhs.set(2);
+  CAF_CHECK(rhs.get() == std::set<int>{2});
+  CAF_CHECK(lhs.clock().compare(rhs.clock()) == vector_clock_result::concurrent);
+  auto old_lhs = lhs;
+  lhs.merge(rhs);
+  CAF_CHECK(lhs.get() == std::set<int>{1,2});
+  rhs.merge(old_lhs);
+  CAF_CHECK(rhs.get() == std::set<int>{1,2});
+}
+
+CAF_TEST_FIXTURE_SCOPE_END()

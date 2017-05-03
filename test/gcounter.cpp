@@ -57,7 +57,6 @@ CAF_TEST(merge) {
   CAF_CHECK(lhs.count() == 2);
   CAF_CHECK(rhs.count() == 1);
   CAF_CHECK(delta.count() == 1);
-  // --
   delta = rhs.merge(lhs);
   CAF_CHECK(lhs.count() == 2);
   CAF_CHECK(rhs.count() == 2);
