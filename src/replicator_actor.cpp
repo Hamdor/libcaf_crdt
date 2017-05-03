@@ -68,27 +68,33 @@ protected:
       [&](uri& id, message& msg) {
         if (current_sender()->node() == this->node())
           dist_.publish(id, msg); // Add to send buffer
-        delegate(find_actor(id), publish_atom::value, std::move(msg));
+        auto delegate_to = find_actor(id);
+        if (delegate_to)
+          delegate(delegate_to, publish_atom::value, std::move(msg));
       },
       [&](uri& id, std::vector<message>& msgs) {
-        delegate(find_actor(id), publish_atom::value, std::move(msgs));
+        auto delegate_to = find_actor(id);
+        if (delegate_to)
+          delegate(delegate_to, publish_atom::value, std::move(msgs));
       },
-      [&](tick_state_atom& atm) {
+      [&](tick_state_atom) {
         // All states have to send their state to the replicator
         for (auto& state : states_)
           anon_send(state.second, copy_atom::value);
-        delayed_send(this, interval_res(state_interval_ms_), atm);
+        delayed_send(this, interval_res(state_interval_ms_),
+                     tick_state_atom::value);
       },
-      [&](copy_ack_atom, uri& u, message& msg) {
-        dist_.publish(std::move(u), std::move(msg));
+      [&](copy_ack_atom, uri& id, message& msg) {
+        dist_.publish(std::move(id), std::move(msg));
       },
-      [&](tick_ids_atom& atm) {
+      [&](tick_ids_atom) {
         dist_.pull_ids();
-        delayed_send(this, interval_res(flush_ids_ms_), atm);
+        delayed_send(this, interval_res(flush_ids_ms_), tick_ids_atom::value);
       },
-      [&](tick_buffer_atom& atm) {
+      [&](tick_buffer_atom) {
         dist_.flush_buffer();
-        delayed_send(this, interval_res(flush_buffer_interval_ms_), atm);
+        delayed_send(this, interval_res(flush_buffer_interval_ms_),
+                     tick_buffer_atom::value);
       },
       // ---
       [&](new_connection_atom, const node_id& node) {
@@ -104,43 +110,65 @@ protected:
         dist_.update(current_sender()->node(), version, std::move(ids));
       },
       // --- Subscribe & Unsubscribe
-      [&](subscribe_atom& atm, const uri& u) {
-        delegate(find_actor(u), atm);
+      [&](subscribe_atom, const uri& id) {
+        auto delegate_to = find_actor(id);
+        if (delegate_to)
+          delegate(delegate_to, subscribe_atom::value);
       },
-      [&](unsubscribe_atom& , const uri& u) {
-        delegate(find_actor(u), atm);
+      [&](unsubscribe_atom, const uri& id) {
+        auto delegate_to = find_actor(id);
+        if (delegate_to)
+          delegate(delegate_to, unsubscribe_atom::value);
       },
       // -- Read & Write Consistencies
-      [&](read_all_atom& atm, const uri& u) {
-        delegate(find_actor(u), atm, u, dist_.get_intrested(u));
+      [&](read_all_atom, const uri& id) {
+        auto delegate_to = find_actor(id);
+        if (delegate_to)
+          delegate(delegate_to, read_all_atom::value, id,
+                   dist_.get_intrested(id));
       },
-      [&](read_majority_atom& atm, const uri& u) {
-        delegate(find_actor(u), atm, u, dist_.get_intrested(u));
+      [&](read_majority_atom, const uri& id) {
+        auto delegate_to = find_actor(id);
+        if (delegate_to)
+          delegate(delegate_to, read_majority_atom::value, id,
+                   dist_.get_intrested(id));
       },
-      [&](read_local_atom& atm, const uri& u) {
-        delegate(find_actor(u), atm);
+      [&](read_local_atom, const uri& id) {
+        auto delegate_to = find_actor(id);
+        if (delegate_to)
+          delegate(delegate_to, read_local_atom::value);
       },
-      [&](write_all_atom& atm, const uri& u, const message& msg) {
-        delegate(find_actor(u), atm, u, dist_.get_intrested(u), msg);
+      [&](write_all_atom, const uri& id, const message& msg) {
+        auto delegate_to = find_actor(id);
+        if (delegate_to)
+          delegate(delegate_to, write_all_atom::value, id,
+                   dist_.get_intrested(id), msg);
       },
-      [&](write_majority_atom& atm, const uri& u, const message& msg) {
-        delegate(find_actor(u), atm, u, dist_.get_intrested(u), msg);
+      [&](write_majority_atom, const uri& id, const message& msg) {
+        auto delegate_to = find_actor(id);
+        if (delegate_to)
+          delegate(delegate_to, write_majority_atom::value, id,
+                   dist_.get_intrested(id), msg);
       },
-      [&](write_local_atom& atm, const uri& u, const message& msg) {
-        delegate(find_actor(u), atm, msg);
+      [&](write_local_atom, const uri& id, const message& msg) {
+        auto delegate_to = find_actor(id);
+        if (delegate_to)
+          delegate(delegate_to, write_local_atom::value, msg);
       }
     };
   }
 
 private:
 
-  actor find_actor(const uri& u) {
-    auto iter = states_.find(u);
+  actor find_actor(const uri& id) {
+    auto iter = states_.find(id);
     if (iter == states_.end()) {
-      auto args = make_message(u, notify_interval_ms_);
-      auto opt = system().spawn<actor>(u.scheme(), std::move(args));
-      iter = states_.emplace(u, *opt).first;
-      dist_.add_id(u);
+      auto args = make_message(id, notify_interval_ms_);
+      auto opt = system().spawn<actor>(id.scheme(), std::move(args));
+      if (!opt)
+        return {};
+      iter = states_.emplace(id, *opt).first;
+      dist_.add_id(id);
     }
     return iter->second;
   }

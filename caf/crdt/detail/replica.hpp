@@ -154,24 +154,29 @@ protected:
           return; // State was already included
         buffer_.merge(delta);
       },
-      [&](notify_atom& atm) {
+      [&](notify_atom) {
         if (!buffer_.empty()) {
           auto msg = make_message(notify_atom::value, buffer_);
           for (auto& sub : subs_)
             send(sub, msg);
           buffer_ = {}; // reset buffer
         }
-        delayed_send(this, std::chrono::milliseconds(notify_interval_ms_), atm);
+        delayed_send(this, std::chrono::milliseconds(notify_interval_ms_),
+                     notify_atom::value);
       },
       [&](subscribe_atom) {
         auto handle = actor_cast<actor>(current_sender());
+        if (!handle)
+          return;
         subs_.emplace(handle);
         // Send current full state to subscriber
         if (!cvrdt_.empty())
           send(handle, notify_atom::value, cvrdt_);
       },
       [&](unsubscribe_atom) {
-        subs_.erase(actor_cast<actor>(current_sender()));
+        auto handle = actor_cast<actor>(current_sender());
+        if (handle)
+          subs_.erase(handle);
       },
       [&](copy_atom) {
         send(system().replicator().actor_handle(),
