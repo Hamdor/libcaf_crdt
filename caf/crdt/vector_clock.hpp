@@ -91,6 +91,11 @@ public:
     proc & x.map_;
   }
 
+  /// @private
+  friend bool operator< (const vector_clock& lhs, const vector_clock& rhs) {
+    return lhs.compare(rhs) != vector_clock_result::concurrent;
+  }
+
 private:
   size_t count(const actor& slot) const;
 
