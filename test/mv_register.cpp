@@ -50,15 +50,23 @@ CAF_TEST(merge) {
   lhs.set_owner(system.spawn(dummy_actor));
   rhs.set_owner(system.spawn(dummy_actor));
   lhs.set(1);
-  CAF_CHECK(lhs.get() == std::set<int>{1});
+  CAF_CHECK(lhs.get_set().size() == 1);
+  CAF_CHECK(lhs.get() == 1);
   rhs.set(2);
-  CAF_CHECK(rhs.get() == std::set<int>{2});
-  CAF_CHECK(lhs.clock().compare(rhs.clock()) == vector_clock_result::concurrent);
-  auto old_lhs = lhs;
+  CAF_CHECK(rhs.get_set().size() == 1);
+  CAF_CHECK(rhs.get() == 2);
   lhs.merge(rhs);
-  CAF_CHECK(lhs.get() == std::set<int>{1,2});
-  rhs.merge(old_lhs);
-  CAF_CHECK(rhs.get() == std::set<int>{1,2});
+  CAF_CHECK(lhs.get_set().size() == 2);
+  if (lhs.get_set().size() == 2) {
+    auto first  = *lhs.get_set().begin();
+    auto second = *(++lhs.get_set().begin());
+    CAF_CHECK(std::get<0>(first) == 1);
+    CAF_CHECK(std::get<0>(second) == 2);
+    CAF_CHECK(std::get<1>(first).compare(std::get<1>(second))
+               == vector_clock_result::concurrent);
+  }
+  rhs.merge(lhs);
+  CAF_CHECK(rhs.get_set().size() == 2);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

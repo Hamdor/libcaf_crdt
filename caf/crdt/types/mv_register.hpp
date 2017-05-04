@@ -33,12 +33,13 @@ namespace types {
 template <class T>
 class mv_register : public base_datatype {
 
-  mv_register(const T& value, const vector_clock& clk)
-    : register_{value}, clk_{clk} {
+  mv_register(std::set<std::tuple<T, vector_clock>> value,
+              vector_clock&& clk)
+    : register_{value}, clk_{std::move(clk)} {
     // nop
   }
 
-  mv_register(std::set<T>&& set, vector_clock clk)
+  mv_register(std::set<std::tuple<T, vector_clock>>&& set, vector_clock clk)
     : register_{std::move(set)}, clk_{std::move(clk)} {
     // nop
   }
@@ -61,20 +62,28 @@ public:
   /// @param value to set
   void set(const T& value) {
     auto clock = clk_.increment(owner());
-    register_ = {value};
-    publish(mv_register{value, std::move(clock)});
+    register_ = {std::make_tuple(value, clock)};
+    publish(mv_register{register_, std::move(clock)});
   }
 
   /// @returns the current set of elements
-  const std::set<T>& get() const { return register_; }
+  const std::set<std::tuple<T, vector_clock>>& get_set() const {
+    return register_;
+  }
 
-  /// @returns the current vector clock timestamp
-  const vector_clock& clock() const { return clk_; }
+  /// @returns the current element
+  ///          if there concurrent elements, none will be returned
+  ///          if there is no current element, the element will be returned
+  optional<T> get() const {
+    if (register_.size() > 1)
+      return none;
+    return std::get<0>(*register_.begin());
+  }
 
   ///
   mv_register merge(const mv_register& other) {
-    std::set<T> delta;
-    switch(clk_.compare(other.clk_)) {
+    std::set<std::tuple<T, vector_clock>> delta;
+    switch(other.clk_.compare(clk_)) {
       case greater:
         register_ = other.register_;
         delta     = other.register_;
@@ -102,7 +111,7 @@ public:
   }
 
 private:
-  std::set<T> register_;
+  std::set<std::tuple<T, vector_clock>> register_;
   vector_clock clk_;
 };
 
