@@ -31,11 +31,11 @@ replicator_hook::replicator_hook(actor_system& sys)
 }
 
 void replicator_hook::new_connection_established_cb(const node_id& node) {
-  new_connection(node);
+  on_new_connection(node);
 }
 
 void replicator_hook::new_route_added_cb(const node_id&, const node_id& node) {
-  new_connection(node);
+  on_new_connection(node);
 }
 
 void replicator_hook::connection_lost_cb(const node_id& node) {
@@ -43,7 +43,7 @@ void replicator_hook::connection_lost_cb(const node_id& node) {
   self_->send(hdl, connection_lost_atom::value, node);
 }
 
-void replicator_hook::new_connection(const node_id& node) {
+void replicator_hook::on_new_connection(const node_id& node) {
   auto hdl = sys_.replicator().actor_handle();
   self_->send(hdl, new_connection_atom::value, node);
 }

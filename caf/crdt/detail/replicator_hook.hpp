@@ -44,7 +44,7 @@ public:
 
 private:
 
-  void new_connection(const node_id& node);
+  void on_new_connection(const node_id& node);
 
   scoped_actor self_;
   actor_system& sys_;
