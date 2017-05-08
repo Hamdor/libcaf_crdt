@@ -42,7 +42,8 @@ void replicator::start() {
 
 void replicator::stop() {
   scoped_actor self{system(), true};
-  //self->monitor(manager_);
+  self->monitor(manager_);
+  self->send(manager_, tick_buffer_atom::value);
   self->send_exit(manager_, exit_reason::user_shutdown);
   self->wait_for(manager_);
   destroy(manager_);
