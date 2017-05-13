@@ -50,38 +50,35 @@ behavior writer(stateful_actor<wr_state<T>>* self) {
     self->delayed_send(self, std::chrono::milliseconds(tout),
                        timeout_atom::value);
   };
+  auto send_write = [=](size_t k, const uri& id, const message& msg,
+                        const std::set<replicator_actor>& to) {
+    init(k, 10000); // TODO: How to get timeout?
+    size_t sent = 0;
+    for (auto& rep : to) {
+      self->send(rep, write_local_atom::value, id, msg);
+      if (++sent == k) break;
+    }
+  };
   return {
-    [=](write_all_atom, const uri& u, std::set<replicator_actor> to,
+    [=](write_all_atom, const uri& id, std::set<replicator_actor> to,
         const message& msg) {
-      init(to.size(), 10000); // TODO: How to get timeout?
-      for (auto& rep : to)
-        self->send(rep, write_local_atom::value, u, msg);
+      send_write(to.size(), id, msg, to);
     },
-    [=](write_majority_atom, const uri& u, std::set<replicator_actor> to,
+    [=](write_majority_atom, const uri& id, std::set<replicator_actor> to,
         const message& msg) {
       auto n = to.size() / 2 + 1;
-      init(n, 10000); // TODO: How to get timeout?
-      size_t send = 0;
-      for (auto& rep : to) {
-        self->send(rep, write_local_atom::value, u, msg);
-        if (++send == n)
-          break;
-      }
+      send_write(n, id, msg, to);
     },
-    [=](write_k_atom, const uri& u, std::set<replicator_actor> to,
+    [=](write_k_atom, const uri& id, std::set<replicator_actor> to,
         const message& msg, size_t k) {
       auto n = std::min(to.size(), k);
-      init(n, 10000); // TODO: How to get timeout?
-      size_t send = 0;
-      for (auto& rep : to) {
-        self->send(rep, write_local_atom::value, u, msg);
-        if (++send == n)
-          break;
-      }
+      send_write(n, id, msg, to);
     },
     [=](write_succeed_atom) {
-      if (--self->state.messages_left == 0)
+      if (--self->state.messages_left == 0) {
         self->state.rp.deliver(write_succeed_atom::value);
+        self->quit();
+      }
     },
     [=](timeout_atom) {
       self->state.rp.deliver(make_error(sec::request_timeout));
@@ -99,36 +96,34 @@ behavior reader(stateful_actor<wr_state<T>>* self) {
     self->delayed_send(self, std::chrono::milliseconds(tout),
                        timeout_atom::value);
   };
+  auto send_read = [=](size_t k, const uri& id,
+                       const std::set<replicator_actor>& from) {
+    init(k, 10000); // TODO: How to get timeout?
+    size_t send = 0;
+    for (auto& rep : from) {
+      self->send(rep, read_local_atom::value, id);
+      if (++send == k)
+        break;
+     }
+  };
   return {
-    [=](read_all_atom, const uri& u, std::set<replicator_actor> from) {
-      init(from.size(), 10000); // TODO: How to get timeout?
-      for (auto& rep : from)
-        self->send(rep, read_local_atom::value, u);
+    [=](read_all_atom, const uri& id, std::set<replicator_actor> from) {
+      send_read(from.size(), id, from);
     },
-    [=](read_majority_atom, const uri& u, std::set<replicator_actor> from) {
+    [=](read_majority_atom, const uri& id, std::set<replicator_actor> from) {
       auto n = from.size() / 2 + 1;
-      init(n, 10000); // TODO: How to get timeout?
-      size_t send = 0;
-      for (auto& rep : from) {
-        self->send(rep, read_local_atom::value, u);
-        if (++send == n)
-          break;
-      }
+      send_read(n, id, from);
     },
-    [=](read_k_atom, const uri& u, std::set<replicator_actor> from, size_t k) {
+    [=](read_k_atom, const uri& id, std::set<replicator_actor> from, size_t k) {
       auto n = std::min(from.size(), k);
-      init(n, 10000); // TODO: How to get timeout?
-      size_t send = 0;
-      for (auto& rep : from) {
-        self->send(rep, read_local_atom::value, u);
-        if (++send == n)
-          break;
-      }
+      send_read(n, id, from);
     },
     [=](read_succeed_atom, const T& msg) {
       self->state.crdt.merge(msg);
-      if (--self->state.messages_left == 0)
+      if (--self->state.messages_left == 0) {
         self->state.rp.deliver(read_succeed_atom::value, self->state.crdt);
+        self->quit();
+      }
     },
     [=](timeout_atom) {
       self->state.rp.deliver(make_error(sec::request_timeout));
