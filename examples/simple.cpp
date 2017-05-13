@@ -34,8 +34,8 @@ void actor_fun(stateful_actor<state>* self) {
     [=](notify_atom, const gset<int>& other) {
       self->state.crdt.merge(other);
       if (self->state.crdt.size() == assumed_entries) {
-        self->quit();
         aout(self) << "got all entries... exiting...\n";
+        self->quit();
       }
     }
   );
@@ -47,6 +47,7 @@ void caf_main(actor_system& system, const config&) {
   std::generate(v.begin(), v.end(), [&] { return val++; });
   for (size_t i = 0; i < to_spawn; ++i)
     anon_send(system.spawn(actor_fun), v[i]);
+  std::this_thread::sleep_for(std::chrono::seconds(5));
 }
 
 } // namespace <anonymous>

@@ -23,6 +23,7 @@
 
 using namespace caf;
 using namespace caf::crdt;
+using namespace caf::crdt::types;
 
 namespace {
 
@@ -36,19 +37,19 @@ public:
   using event_based_actor::event_based_actor;
 };
 
-class incrementer : public types::gcounter<int>::base {
+class incrementer : public notifiable<gcounter<int>>::base {
 public:
   incrementer(actor_config& cfg)
-    : types::gcounter<int>::base(cfg),
+    : notifiable<gcounter<int>>::base(cfg),
       state_(this, "gcounter<int>://counter") {
     // nop
   }
 
 protected:
-  types::gcounter<int>::behavior_type make_behavior() override {
+  notifiable<gcounter<int>>::behavior_type make_behavior() override {
     state_.increment_by(inc_by);
     return {
-      [&](notify_atom, const types::gcounter<int>& t) {
+      [&](notify_atom, const gcounter<int>& t) {
         state_.merge(t);
         if (state_.count() == expected) {
           aout(this) << "Count is: " << state_.count() << " ==> quit()\n";
@@ -59,14 +60,14 @@ protected:
   }
 
 private:
-  types::gcounter<int> state_;
+  gcounter<int> state_;
 };
 
 class config : public crdt_config {
 public:
   config() : crdt_config() {
     load<io::middleman>();
-    add_crdt<types::gcounter<int>>("gcounter<int>");
+    add_crdt<gcounter<int>>("gcounter<int>");
     set_state_interval(std::chrono::seconds(1));
     set_flush_interval(std::chrono::seconds(1));
   }

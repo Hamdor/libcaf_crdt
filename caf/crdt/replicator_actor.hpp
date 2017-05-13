@@ -62,12 +62,16 @@ using replicator_actor =
     reacts_to<unsubscribe_atom, uri>,
     /// Reads the value from all nodes
     reacts_to<read_all_atom, uri>,
+    /// Reads the value from k nodes
+    reacts_to<read_k_atom, size_t, uri>,
     /// Reads the value from a majority of nodes
     reacts_to<read_majority_atom, uri>,
     /// Reads only the local value
     reacts_to<read_local_atom, uri>,
     /// Writes to all nodes
     reacts_to<write_all_atom, uri, message>,
+    /// Writes to k nodes
+    reacts_to<write_k_atom, size_t, uri, message>,
     /// Writes to a majority of nodes
     reacts_to<write_majority_atom, uri, message>,
     /// Writes only to local node

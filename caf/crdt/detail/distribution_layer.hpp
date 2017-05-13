@@ -24,6 +24,8 @@
 
 #include "caf/crdt/uri.hpp"
 
+#include "caf/crdt/detail/abstract_distribution_layer.hpp"
+
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
@@ -33,7 +35,7 @@ namespace crdt {
 namespace detail {
 
 /// Manages the data send between nodes.
-class distribution_layer {
+class distribution_layer : public abstract_distribution_layer {
 
   ///
   struct node_data {
@@ -57,7 +59,7 @@ public:
 
   /// Add a freshly discovered node
   /// @param nid node to add
-  void add_new_node(const node_id& nid) {
+  void add_new_node(const node_id& nid) override {
     auto& mm = impl_->home_system().middleman();
     auto query = mm.remote_lookup(replicator_atom::value, nid);
     if (query) {
@@ -70,7 +72,7 @@ public:
 
   /// A node is no longer reachable, we have to remove it from our lists
   /// @param nid node to remove
-  void remove_node(const node_id& nid) {
+  void remove_node(const node_id& nid) override {
     store_.erase(nid);
     for (auto& entry : uri_to_nodes_)
       entry.second.erase(nid);
@@ -81,7 +83,7 @@ public:
   /// @param version  version of set
   /// @param ids      set of ids
   void update(const node_id& nid, size_t version,
-              std::unordered_set<uri>&& ids) {
+              std::unordered_set<uri>&& ids) override {
     auto& data = store_[nid];
     if (version > data.version) {
       // Remove old ids from mapping
@@ -96,13 +98,13 @@ public:
 
   /// Locally add a replic Id, this is called, when a new replica<T> is spawned
   /// @param u uri to add
-  void add_id(const uri& u) {
+  void add_id(const uri& u) override {
     modify_ids(u, false);
   }
 
   /// Locally remove a replic id
   /// @param u uri to remove
-  void remove_id(const uri& u) {
+  void remove_id(const uri& u) override {
     modify_ids(u, true);
   }
 
@@ -118,12 +120,12 @@ public:
   /// A node has asked us to respond with our replic Ids, if the version has
   /// changed. Seen is the last seen version by the sender, if we have a newer
   /// version, just respond to intrested node with our actual entry.
-  /// @param instested_node the node intrested in our ids
+  /// @param intrested_node the node intrested in our ids
   /// @param seen the last seen version of instrested node
-  void get_ids(const node_id& instested_node, size_t seen) {
+  void get_ids(const node_id& intrested_node, size_t seen) {
     if (seen == local_.version)
       return;
-    auto iter = store_.find(instested_node);
+    auto iter = store_.find(intrested_node);
     if (iter == store_.end())
       return;
     auto& data = iter->second;
@@ -133,15 +135,17 @@ public:
   /// Add update into update buffer
   /// @param id of update as uri
   /// @param msg containing the update
-  void publish(const uri& id, const message& msg) {
+  void publish(const uri& id, const message& msg) override {
     buffer_[id].emplace_back(msg);
   }
 
   /// Flushes the update buffer
-  void flush_buffer() {
+  void flush_buffer() override {
     for (auto& entry : buffer_) {
       auto& id  = entry.first;
       auto& set = entry.second;
+      if (set.empty())
+        continue;
       auto& intrested_nodes = uri_to_nodes_[id];
       for (auto& node : intrested_nodes)
         send_as(impl_, store_[node].replicator, id, set);
@@ -149,7 +153,7 @@ public:
     }
   }
 
-  std::set<replicator_actor> get_intrested(const uri& id) const {
+  std::set<replicator_actor> get_intrested(const uri& id) const override {
     std::set<replicator_actor> result;
     for (auto& entry : store_) {
       auto& set = entry.second.filter;

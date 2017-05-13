@@ -67,6 +67,8 @@ CAF_TEST(merge) {
   }
   rhs.merge(lhs);
   CAF_CHECK(rhs.get_set().size() == 2);
+  rhs.set(5);
+  CAF_CHECK(rhs.get_set().size() == 1 && rhs.get() == 5);
 }
 
 CAF_TEST_FIXTURE_SCOPE_END()

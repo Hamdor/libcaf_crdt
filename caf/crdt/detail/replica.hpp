@@ -70,7 +70,14 @@ behavior writer(stateful_actor<wr_state<T>>* self) {
     },
     [=](write_k_atom, const uri& u, std::set<replicator_actor> to,
         const message& msg, size_t k) {
-      // TODO
+      auto n = std::min(to.size(), k);
+      init(n, 10000); // TODO: How to get timeout?
+      size_t send = 0;
+      for (auto& rep : to) {
+        self->send(rep, write_local_atom::value, u, msg);
+        if (++send == n)
+          break;
+      }
     },
     [=](write_succeed_atom) {
       if (--self->state.messages_left == 0)
@@ -100,6 +107,16 @@ behavior reader(stateful_actor<wr_state<T>>* self) {
     },
     [=](read_majority_atom, const uri& u, std::set<replicator_actor> from) {
       auto n = from.size() / 2 + 1;
+      init(n, 10000); // TODO: How to get timeout?
+      size_t send = 0;
+      for (auto& rep : from) {
+        self->send(rep, read_local_atom::value, u);
+        if (++send == n)
+          break;
+      }
+    },
+    [=](read_k_atom, const uri& u, std::set<replicator_actor> from, size_t k) {
+      auto n = std::min(from.size(), k);
       init(n, 10000); // TODO: How to get timeout?
       size_t send = 0;
       for (auto& rep : from) {
@@ -187,6 +204,11 @@ protected:
         delegate(this->spawn(reader<T>), read_all_atom::value, u,
                  std::move(from));
       },
+      [&](read_k_atom, const uri& u, std::set<replicator_actor> from, size_t k) {
+        from.emplace(this->system().replicator().actor_handle());
+        delegate(this->spawn(reader<T>), read_majority_atom::value, u,
+                 std::move(from), k);
+      },
       [&](read_majority_atom, const uri& u, std::set<replicator_actor> from) {
         from.emplace(this->system().replicator().actor_handle());
         delegate(this->spawn(reader<T>), read_majority_atom::value, u,
@@ -200,6 +222,12 @@ protected:
         to.emplace(this->system().replicator().actor_handle());
         delegate(this->spawn(writer<T>), write_all_atom::value, u, std::move(to),
                  msg);
+      },
+      [&](write_k_atom, const uri& u, std::set<replicator_actor> to,
+          const message& msg, size_t k) {
+        to.emplace(this->system().replicator().actor_handle());
+        delegate(this->spawn(writer<T>), write_all_atom::value, u, std::move(to),
+                 msg, k);
       },
       [&](write_majority_atom, const uri& u, std::set<replicator_actor> to,
           const message& msg) {

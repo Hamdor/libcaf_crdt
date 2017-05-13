@@ -30,6 +30,9 @@ namespace crdt {
 /// Send to subscribed actors when a replica has changed
 using notify_atom = atom_constant<atom("notify")>;
 
+/// Send to replicator to write to K nodes
+using read_k_atom = atom_constant<atom("readK")>;
+
 /// Send to replicator to read states from a majority of nodes
 using read_majority_atom = atom_constant<atom("readMajor")>;
 

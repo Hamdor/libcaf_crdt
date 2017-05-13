@@ -127,6 +127,12 @@ protected:
           delegate(delegate_to, read_all_atom::value, id,
                    dist_.get_intrested(id));
       },
+      [&](read_k_atom, size_t k, const uri& id) {
+        auto delegate_to = find_actor(id);
+        if (delegate_to)
+          delegate(delegate_to, read_all_atom::value, id,
+                   dist_.get_intrested(id), k);
+      },
       [&](read_majority_atom, const uri& id) {
         auto delegate_to = find_actor(id);
         if (delegate_to)
@@ -143,6 +149,12 @@ protected:
         if (delegate_to)
           delegate(delegate_to, write_all_atom::value, id,
                    dist_.get_intrested(id), msg);
+      },
+      [&](write_k_atom, size_t k, const uri& id, const message& msg) {
+        auto delegate_to = find_actor(id);
+          if (delegate_to)
+            delegate(delegate_to, write_all_atom::value, id,
+                     dist_.get_intrested(id), msg, k);
       },
       [&](write_majority_atom, const uri& id, const message& msg) {
         auto delegate_to = find_actor(id);
