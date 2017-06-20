@@ -94,6 +94,13 @@ vector_clock vector_clock::merge(const vector_clock& other) {
   return {std::move(delta)};
 }
 
+size_t vector_clock::count() const {
+  size_t value = 0;
+  for (auto& e : map_)
+    value += map_.count(e.first);
+  return value;
+}
+
 size_t vector_clock::count(const actor& slot) const {
   return map_.count(slot);
 }

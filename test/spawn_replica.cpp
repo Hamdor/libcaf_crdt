@@ -17,24 +17,67 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#define CAF_SUITE lamport_clock
+#define CAF_SUITE spawn_replica
 #include "caf/test/unit_test.hpp"
 
-#include "caf/crdt/lamport_clock.hpp"
+#include "caf/all.hpp"
+#include "caf/crdt/all.hpp"
 
+using namespace caf;
 using namespace caf::crdt;
+using namespace caf::crdt::types;
+using namespace std::chrono;
 
-CAF_TEST(compare) {
-  lamport_clock l1, l2;
-  CAF_CHECK(l1 == l2);
-  CAF_CHECK(!(l1 < l2));
-  CAF_CHECK(!(l1 > l2));
-  CAF_CHECK(l1 == *l2);
-  // ...
-  CAF_CHECK(++l1 == 1);
-  CAF_CHECK(l1 != l2);
-  CAF_CHECK(l1 > l2);
-  CAF_CHECK(l1 == ++l2);
-  l1.merge({42});
-  CAF_CHECK(l1 == 42);
+namespace {
+
+class config : public crdt_config {
+public:
+  config() {
+    add_crdt<gset<float>>("gset<float>");
+  }
+
+};
+
+struct fixture {
+  fixture() : system{cfg} {
+    // nop
+  }
+
+  config cfg;
+  actor_system system;
+};
+
+} // namespace <anonymous>
+
+
+CAF_TEST_FIXTURE_SCOPE(spawn_replica_test, fixture)
+
+CAF_TEST(spawn_fail) {
+  auto repl = system.replicator().actor_handle();
+  scoped_actor self{system};
+  bool failed = false;
+  self->request(repl, seconds(1), subscribe_atom::value,
+                uri{"gset<int>://bla"}).receive(
+    [] {
+      // nop
+    },
+    [&](error&) { failed = true; }
+  );
+  CAF_CHECK(failed);
 }
+
+CAF_TEST(spawn_ok) {
+  auto repl = system.replicator().actor_handle();
+  scoped_actor self{system};
+  bool failed = false;
+  self->request(repl, seconds(1), subscribe_atom::value,
+                uri{"gset<float>://bla"}).receive(
+    [] {
+      // nop
+    },
+    [&](error&) { failed = true; }
+  );
+  CAF_CHECK(!failed);
+}
+
+CAF_TEST_FIXTURE_SCOPE_END()

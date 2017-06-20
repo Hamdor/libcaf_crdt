@@ -27,7 +27,7 @@ using namespace caf::crdt::types;
 
 namespace {
 
-constexpr int nr_spawn = 5;
+constexpr int nr_spawn = 10;
 constexpr int inc_by   = 10;
 constexpr int number_of_nodes = 2;
 constexpr int expected = nr_spawn * inc_by * number_of_nodes;
@@ -66,37 +66,23 @@ private:
 class config : public crdt_config {
 public:
   config() : crdt_config() {
-    load<io::middleman>();
     add_crdt<gcounter<int>>("gcounter<int>");
-    set_state_interval(std::chrono::seconds(1));
-    set_flush_interval(std::chrono::seconds(1));
   }
 };
 
 void caf_main(actor_system& system, const config&) {
   config conf{};
   actor_system system2{conf};
-  // -- Publish two dummies
-  auto port1 = *system.middleman().publish(system.spawn<port_dummy>(), 0);
-  auto port2 = *system2.middleman().publish(system2.spawn<port_dummy>(), 0);
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-  // ----------------------
-  // -- Connect to nodes
-  {
-    scoped_actor self{system};
-    self->send(system.middleman().actor_handle(), connect_atom::value,
-               "127.0.0.1", port2);
-    scoped_actor self2{system2};
-    self2->send(system2.middleman().actor_handle(), connect_atom::value,
-                "127.0.0.1", port1);
-  }
-  std::this_thread::sleep_for(std::chrono::seconds(2));
-  // ----------------------
+  auto port1 = system.middleman().open(0);
+  auto port2 = system2.middleman().open(0);
+  if (!port1 || !port2)
+    return;
+  system.middleman().connect("localhost", *port2);
+  system2.middleman().connect("localhost", *port1);
   for (int i = 0; i < nr_spawn; ++i) {
     system.spawn<incrementer>();
     system2.spawn<incrementer>();
   }
-  std::this_thread::sleep_for(std::chrono::seconds(5));
 }
 
 } // namespace <anonymous>

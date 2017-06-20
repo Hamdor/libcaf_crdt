@@ -37,17 +37,8 @@ CAF_TEST(uri_parse) {
   };
   std::string invalid[] = {"",
                            "*",
-                           "://",
-                           "gset<int>://rand/*/"
+                           "://"
   };
   for (auto& what : valid) CAF_CHECK(uri{what}.valid());
   for (auto& what : invalid) CAF_CHECK(!uri{what}.valid());
-}
-
-CAF_TEST(uri_rrti) {
-  struct a {};
-  auto cfg = actor_system_config{};
-  cfg.add_message_type<a>("a");
-  actor_system system{cfg};
-  CAF_CHECK(uri{"a://"}.match_rtti<a>(system));
 }

@@ -42,13 +42,12 @@ struct fixture {
 
 } // namespace <anonymous>
 
-CAF_TEST_FIXTURE_SCOPE(gcounter_tests, fixture)
+CAF_TEST_FIXTURE_SCOPE(mv_register_tests, fixture)
 
 CAF_TEST(merge) {
   auto dummy_actor = [](event_based_actor*) {};
-  mv_register<int> lhs, rhs;
-  lhs.set_owner(system.spawn(dummy_actor));
-  rhs.set_owner(system.spawn(dummy_actor));
+  mv_register<int> lhs{system.spawn(dummy_actor)};
+  mv_register<int> rhs{system.spawn(dummy_actor)};
   lhs.set(1);
   CAF_CHECK(lhs.get_set().size() == 1);
   CAF_CHECK(lhs.get() == 1);

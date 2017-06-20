@@ -33,7 +33,6 @@ class uri : caf::detail::comparable<uri> {
   static constexpr char wildcard = '*';
   static constexpr char path_delim = '/';
 public:
-
   uri() = default;
 
   /// Creates a uri from a string
@@ -48,36 +47,24 @@ public:
     parse(what);
   }
 
-  /// Creates a uri from a path string and a type
-  /// @param system which knows type T
-  /// @param path of uri
-  template <class T>
-  uri(T*, const actor_system& system, const std::string& path) {
-    auto nr = type_nr<T>::value;
-    auto* name = (nr != 0) ? system.types().portable_name(nr, nullptr)
-                           : system.types().portable_name(0, &typeid(T));
-    std::string divider = ":/";
-    from((name ? *name : "<unknown>") + divider + path);
-  }
-
   /// @returns the scheme of the uri
   inline const std::string& scheme() const { return scheme_; }
 
   /// @returns the path of the uri
   inline const std::string& path() const { return path_; }
 
+  /// @returns the string of the uri
+  inline std::string to_string() const { return scheme_ + ":/" + path_; }
 
-  inline std::string str() const { return to_string(); }
+  /// @returns `true` if a valid uri is loaded otherwise `false`.
+  inline bool valid() const { return !path_.empty() && !scheme_.empty(); }
 
-  /// @returns `true` if type is valid in our actor system
-  template <class T>
-  bool match_rtti(const actor_system& system) const {
-    auto nr = type_nr<T>::value;
-    auto* name = (nr != 0) ? system.types().portable_name(nr, nullptr)
-                           : system.types().portable_name(0, &typeid(T));
-    return name != nullptr && std::string{*name} == scheme_;
+  /// @private
+  intptr_t compare(const uri& other) const noexcept {
+    return !(path_ == other.path_ && scheme_ == other.scheme_);
   }
 
+private:
   enum class states {
     parse_scheme,
     parse_slash,
@@ -122,13 +109,6 @@ public:
     return !scheme_.empty() && !path_.empty();
   }
 
-public:
-
-  inline std::string to_string() const { return scheme_ + ":/" + path_; }
-
-  /// @returns `true` if a valid uri is loaded otherwise `false`.
-  inline bool valid() const { return !path_.empty() && !scheme_.empty(); }
-
   /// @private
   template <class Processor>
   friend void serialize(Processor& proc, uri& x) {
@@ -136,13 +116,8 @@ public:
     proc & x.scheme_;
   }
 
-  intptr_t compare(const uri& other) const noexcept {
-    return !(path_ == other.path_ && scheme_ == other.scheme_);
-  }
-
-private:
-  std::string path_;
-  std::string scheme_;
+  std::string path_;   /// Path of uri
+  std::string scheme_; /// Scheme of uri
 };
 
 } // namespace crdt

@@ -36,6 +36,11 @@ class gmap : public base_datatype {
     map_.emplace(k, v);
   }
 
+  /// @private
+  gmap(std::map<Key, Value>&& map) : map_{std::move(map)} {
+    // nop
+  }
+
 public:
   using Container = std::map<Key, Value>;
   using const_iterator = typename Container::const_iterator;
@@ -43,16 +48,11 @@ public:
   using mapped_type = typename Container::mapped_type;
   using value_type = typename Container::value_type;
 
-  /// @private
-  gmap() = default;
+  DECL_CRDT_CTORS(gmap)
 
-  ///
-  template <class ActorType>
-  gmap(ActorType&& owner, std::string id)
-    : base_datatype(std::forward<ActorType>(owner), std::move(id)) {
-    // nop
-  }
-
+  /// Merges two instances of gmap
+  /// @param other the second instance to merge
+  /// @returns a gmap representing the delta
   gmap merge(const gmap& other) {
     Container delta;
     for (auto& entry : other.map_) {
@@ -67,11 +67,11 @@ public:
     return {std::move(delta)};
   }
 
-  /// Assign a new value to key. If a key/value pair already exist,
+  /// Set a new value to key. If a key/value pair already exist,
   /// the new value, has to be bigger than the old value to win.
   /// @return `true` if the new value was assigned
   ///         `false` otherwise.
-  bool assign(const Key& key, const Value& value) {
+  bool set(const Key& key, const Value& value) {
     auto iter = map_.find(key);
     if (iter == map_.end() || iter->second < value) {
       internal_assign(key, value);
@@ -80,7 +80,10 @@ public:
     return false;
   }
 
-  ///
+  /// Returns the value for a specific key
+  /// @param key the key to lookup
+  /// @returns a valid optional if a entry for the given key exist
+  ///          `none` otherwise
   optional<Value> get(const Key& key) const {
     auto iter = map_.find(key);
     if (iter == map_.end())
@@ -88,19 +91,26 @@ public:
     return iter->second;
   }
 
-  ///
+  /// @returns a const iterator for a given key
   inline const_iterator find(const Key& key) const { return map_.find(key); }
 
-  ///
+  /// @returns `true` if the map is empty, `false` otherwise
   inline bool empty() const { return map_.empty(); }
 
-  ///
+  /// @returns the size of the map
   inline size_t size() const { return map_.size(); }
 
+  /// @private
   template <class Processor>
   friend void serialize(Processor& proc, gmap& x) {
     proc & x.map_;
   }
+
+  /// @returns a const iterator to the ending of the internal map
+  inline const_iterator cend() { return map_.cend(); }
+
+  /// @returns a const iterator to the bedinning of the internal map
+  inline const_iterator cbegin() { return map_.cbegin(); }
 
 private:
   void internal_assign(const Key& key, const Value& value) {
@@ -109,13 +119,6 @@ private:
   }
 
   Container map_;  /// Internal map
-
-public:
-  ///
-  inline auto cend() -> decltype(map_.cend()) { return map_.cend(); }
-
-  ///
-  inline auto cbegin() -> decltype(map_.cbegin()) { return map_.cbegin(); }
 };
 
 } // namespace types

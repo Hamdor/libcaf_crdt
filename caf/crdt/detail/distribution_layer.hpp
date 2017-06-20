@@ -153,6 +153,9 @@ public:
     }
   }
 
+  /// Get all intrested nodes to a uri
+  /// @param Replica-ID
+  /// @returns all (known) intrested nodes
   std::set<replicator_actor> get_intrested(const uri& id) const override {
     std::set<replicator_actor> result;
     for (auto& entry : store_) {

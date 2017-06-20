@@ -46,9 +46,8 @@ CAF_TEST_FIXTURE_SCOPE(gcounter_tests, fixture)
 
 CAF_TEST(merge) {
   auto dummy_actor = [](event_based_actor*) {};
-  gcounter<int> lhs, rhs;
-  lhs.set_owner(system.spawn(dummy_actor));
-  rhs.set_owner(system.spawn(dummy_actor));
+  gcounter<int> lhs{system.spawn(dummy_actor)};
+  gcounter<int> rhs{system.spawn(dummy_actor)};
   lhs.increment();
   CAF_CHECK(lhs.count() == 1);
   rhs.increment();

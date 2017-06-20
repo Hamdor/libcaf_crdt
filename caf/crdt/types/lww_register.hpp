@@ -20,227 +20,93 @@
 #ifndef CAF_CRDT_TYPES_LWW_REGISTER_HPP
 #define CAF_CRDT_TYPES_LWW_REGISTER_HPP
 
-#include "caf/node_id.hpp"
-
-#include "caf/crdt/lamport_clock.hpp"
+#include "caf/crdt/vector_clock.hpp"
 
 #include "caf/crdt/types/base_datatype.hpp"
 
-// TODO: Reimplement!
-
-//       for this type it is possible to use just one class
-/*
 namespace caf {
 namespace crdt {
 namespace types {
 
-/// A LWW Reg support the following mutable operations
-enum class lww_reg_operations {
-  none,
-  set
-};
-
-/// Describes a transation for lww_reg<> as CmRDT
+/// Last Writer Wins Register (LWW-Register) implementation as delta-CRDT
 template <class T>
-struct lww_reg_transaction : public base_transaction {
-  using operation_t = lww_reg_operations;
-
-  lww_reg_transaction(std::string topic, operation_t operation,
-                      lamport_clock clk, node_id setter, T value)
-    : base_transaction(std::move(topic)),
-      op_(std::move(operation)),
-      clk_(std::move(clk)),
-      setter_(std::move(setter)),
-      value_(std::move(value)) {
-    // nop
-  }
-
-  /// Construct a new transaction
-  lww_reg_transaction(std::string topic, actor owner, operation_t operation,
-                      lamport_clock clk, node_id setter, T value)
-    : base_transaction(std::move(topic), std::move(owner)),
-      op_(std::move(operation)),
-      clk_(std::move(clk)),
-      setter_(std::move(setter)),
-      value_(std::move(value)) {
-    // nop
-  }
-
-  /// Returns the operation of this transaction
-  inline const operation_t& operation() const { return op_; }
-
-  /// Returns the value of this transaction
-  inline const T& value() const { return value_; }
-
-  /// Returns the timestamp of this transaction
-  inline uint64_t timestamp() const { return clk_.time(); }
-
-  /// Returns the setter of the value (origin node of value)
-  inline const node_id& setter() const { return setter_; }
-
-private:
-  operation_t op_;
-  lamport_clock clk_;
-  node_id setter_;
-  T value_;
-};
-
-namespace delta {
-
-/// This state is hold by top level replica, the CRDT is implemented as
-/// delta-CRDT.
-/// @private
-template <class T>
-struct lww_reg_impl {
-  using operator_t = lww_reg_operations;
-  using transaction_t = lww_reg_transaction<T>;
-
-  /// Default constructor
-  lww_reg_impl() = default;
-
-  lww_reg_impl(uint64_t time, node_id nid, T value)
-      : clk_{time}, setter_{nid}, value_{std::move(value)} {
-    // nop
-  }
-
-  /// Apply transaction from a local subscriber to top level replica
-  /// @param history a transaction
-  /// @return a delta-CRDT which represent the delta
-  lww_reg_impl<T> apply(const transaction_t& history, const node_id&) {
-    if (history.operation() != operator_t::set)
-      return {};
-    if (history.timestamp() > clk_
-         || (history.timestamp() == clk_ && history.setter() > setter_)) {
-      clk_ = {history.timestamp()};
-      setter_ = history.setter();
-      value_ = history.value();
-      return {clk_.time(), setter_, value_};
-    }
-    return {};
-  }
-
-  /// Merge function, for this type it is simple
-  /// @param other delta-CRDT to merge into this
-  /// @returns a delta gset<T>
-  lww_reg_impl<T> merge(const lww_reg_impl<T>& other) {
-    if (other.clk_ > clk_ || (other.clk_ == clk_ && other.setter_ > setter_)) {
-      clk_ = other.clk_;
-      setter_ = other.setter_;
-      value_ = other.value_;
-      return {clk_.time(), setter_, value_};
-    }
-    return {};
-  }
-
-  /// This is used to convert this delta-CRDT to CmRDT transactions
-  /// @param topic for this transaction
-  /// @param creator these transactions where done
-  transaction_t get_cmrdt_transactions(const std::string& topic) const {
-    return {topic, operator_t::set, clk_, setter_, value_};
-  }
-
-  /// @returns `true` if the state is empty
-  ///          `false` otherwise
-  inline bool empty() const { return clk_.time() == 0; }
-
+class lww_register : public base_datatype {
   /// @private
-  template <class Processor>
-  friend void serialize(Processor& proc, lww_reg_impl<T>& x) {
-    proc & x.clk_;
-    proc & x.setter_;
-    proc & x.value_;
+  lww_register(vector_clock clk, actor setter, T value)
+    : clk_{std::move(clk)}, setter_{std::move(setter)},
+      value_{std::move(value)} {
+    // nop
   }
 
-private:
-  lamport_clock clk_;
-  node_id setter_;
-  T value_;
-};
-
-} // namespace delta
-
-namespace cmrdt {
-
-/// Last writer wins register (LWW-Reg) as CmRDT.
-template <class T>
-class lww_reg_impl : public base_datatype {
 public:
-  using operator_t = lww_reg_operations;
-  /// Mutable operations will trigger this type
-  using transaction_t = lww_reg_transaction<T>;
+  using value_type = T;
 
-  lww_reg_impl() = default;
-  lww_reg_impl(const lww_reg_impl&) = default;
+  DECL_CRDT_CTORS(lww_register)
 
-  /// Move assignment, if operations where done, before the state was
-  /// initialized we have to send all done operations to other replicas.
-  lww_reg_impl& operator=(lww_reg_impl&& other) {
-    base_datatype::operator=(std::move(other));
-    if (clk_.time())
-      publish(transaction_t{topic(), owner(), operator_t::set, {clk_.time()},
-              node(), value_});
-    return *this;
-  }
-
-  /// Set a element
-  /// @param elem element to set
-  /// @returns a transaction
-  transaction_t set(const T& elem) {
-    value_ = elem;
-    auto trans = transaction_t{topic(), owner(), operator_t::set,
-                               {clk_.increment()}, node(), elem};
-    publish(trans);
-    return trans;
-  }
-
-  /// @returns the current value of the register
-  const T& get() const { return value_; }
-
-  /// Checks if the register contains an equal value
-  bool equal(const T& other) const { return value_ == other; }
-
-  /// Apply transaction to local CmRDT type
-  /// @param history to apply
-  void apply(const transaction_t& history) {
-    if (history.operation() == operator_t::none)
-      return;
-    if (history.timestamp() > clk_
-      || (history.timestamp() == clk_ && history.setter() > setter_)) {
-      clk_ = {history.timestamp()};
-      setter_ = history.setter();
-      value_  = history.value();
+  /// Merge another lww_register state into this
+  /// @param other delta-CRDT to merge into this
+  /// @returns a delta lww_register<T>
+  lww_register<T> merge(const lww_register<T>& other) {
+    auto transfer = [&](const lww_register<T>& value) {
+      this->clk_    = value.clk_;
+      this->setter_ = value.setter_;
+      this->value_  = value.value_;
+      return value;
+    };
+    switch(clk_.compare(other.clk_)) {
+      case greater:
+        return transfer(other);
+      case equal:
+      case smaller:
+        return {};
+      case concurrent:
+        if (setter_ == other.setter_) return {};
+        else if (setter_ > other.setter_) return {};
+        else if (setter_ < other.setter_) return transfer(other);
     }
+    return {};
   }
+
+  /// Set a new element to the register
+  /// @param value to set
+  void set(const T& value) {
+    clk_ = clk_.increment(owner());
+    setter_ = owner();
+    value_ = value;
+    publish(lww_register<T>{clk_, setter_, value_});
+  }
+
+  /// Move a new element to the register
+  /// @param value to set
+  void set(T&& value) {
+    clk_ = clk_.increment(owner());
+    setter_ = owner();
+    value_ = std::move(value);
+    publish(lww_register<T>{clk_, setter_, value_});
+  }
+
+  /// @returns the current element
+  inline const T& get() const { return value_; }
 
   /// @private
   template <class Processor>
-  friend void serialize(Processor& proc, lww_reg_impl<T>& x) {
+  friend void serialize(Processor& proc, lww_register<T>& x) {
     proc & x.clk_;
     proc & x.setter_;
     proc & x.value_;
   }
 
+  /// @private
+  inline size_t empty() const { return clk_.count() == 0; }
+
 private:
-  lamport_clock clk_;
-  node_id setter_;
-  T value_;
-};
-
-} // namespace cmrdt
-
-/// Implementation of a Last writer wins register (LWW-Reg)
-template <class T>
-struct lww_reg : public cmrdt::lww_reg_impl<T>,
-                 public caf::detail::comparable<lww_reg<T>> {
-
-  lww_reg() = default;
-
-  /// Internal type of gset
-  using internal_t = delta::lww_reg_impl<T>;
+  vector_clock clk_;  /// Timestamp of current element
+  actor setter_;      /// Setter of current element
+  T value_;           /// Current element
 };
 
 } // namespace types
 } // namespace crdt
-} // namespace caf*/
+} // namespace caf
 
 #endif // CAF_CRDT_TYPES_LWW_REGISTER_HPP

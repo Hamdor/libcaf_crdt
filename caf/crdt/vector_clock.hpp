@@ -85,6 +85,9 @@ public:
   /// @returns vector_clock representing the delta
   vector_clock merge(const vector_clock& other);
 
+  /// Get the count of all slots (number of events in the clock)
+  size_t count() const;
+
   /// @private
   template <class Processor>
   friend void serialize(Processor& proc, vector_clock& x) {

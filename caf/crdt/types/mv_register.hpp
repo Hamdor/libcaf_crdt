@@ -46,17 +46,8 @@ class mv_register : public base_datatype {
 
 public:
   using value_type = T;
-  using interface = notifiable<mv_register<T>>;
-  using base = typename notifiable<mv_register<T>>::base;
-  using behavior_type = typename notifiable<mv_register<T>>::behavior_type;
 
-  mv_register() = default;
-
-  template <class ActorType>
-  mv_register(ActorType&& owner, std::string id)
-    : base_datatype(std::forward<ActorType>(owner), std::move(id)) {
-    // nop
-  }
+  DECL_CRDT_CTORS(mv_register)
 
   /// Set a new element to the register
   /// @param value to set

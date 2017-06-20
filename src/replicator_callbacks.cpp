@@ -17,41 +17,33 @@
  * http://www.boost.org/LICENSE_1_0.txt.                                      *
  ******************************************************************************/
 
-#ifndef CAF_CRDT_DETAIL_REPLICATOR_HOOK_HPP
-#define CAF_CRDT_DETAIL_REPLICATOR_HOOK_HPP
+#include "caf/crdt/detail/replicator_callbacks.hpp"
 
-#include "caf/scoped_actor.hpp"
+#include "caf/crdt/replicator.hpp"
 
-#include "caf/io/hook.hpp"
+using namespace caf::crdt::detail;
 
-namespace caf {
-namespace crdt {
-namespace detail {
+replicator_callbacks::replicator_callbacks(actor_system& sys)
+    : io::hook(sys),
+      self_(sys, true),
+      sys_(sys) {
+  // nop
+}
 
-/// IO-Hooks used by replicator
-class replicator_hook : public io::hook {
-public:
-  replicator_hook(actor_system& sys);
+void replicator_callbacks::new_connection_established_cb(const node_id& node) {
+  on_new_connection(node);
+}
 
-  /// Called whenever a handshake via a direct TCP connection succeeded.
-  void new_connection_established_cb(const node_id& dest) override;
+void replicator_callbacks::new_route_added_cb(const node_id&, const node_id& node) {
+  on_new_connection(node);
+}
 
-  /// Called whenever a message from or to a yet unknown node was received.
-  void new_route_added_cb(const node_id&, const node_id& node) override;
+void replicator_callbacks::connection_lost_cb(const node_id& node) {
+  auto hdl = sys_.replicator().actor_handle();
+  self_->send(hdl, connection_lost_atom::value, node);
+}
 
-  /// Called whenever a direct connection was lost.
-  void connection_lost_cb(const node_id& dest) override;
-
-private:
-
-  void on_new_connection(const node_id& node);
-
-  scoped_actor self_;
-  actor_system& sys_;
-};
-
-} // namespace detail
-} // namespace crdt
-} // namespace caf
-
-#endif // CAF_CRDT_DETAIL_REPLICATOR_HOOK_HPP
+void replicator_callbacks::on_new_connection(const node_id& node) {
+  auto hdl = sys_.replicator().actor_handle();
+  self_->send(hdl, new_connection_atom::value, node);
+}

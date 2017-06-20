@@ -22,10 +22,9 @@
 
 #include "caf/send.hpp"
 #include "caf/message.hpp"
+#include "caf/detail/type_traits.hpp"
 
 #include "caf/crdt/atom_types.hpp"
-
-#include "caf/actor_ostream.hpp"
 
 #include <string>
 
@@ -33,47 +32,65 @@ namespace caf {
 namespace crdt {
 namespace types {
 
-///
+#define DECL_CRDT_CTORS(name)                                                  \
+  template <                                                                   \
+    class U,                                                                   \
+    class = caf::detail::enable_if_t<                                          \
+      std::is_same<name, typename std::decay<U>::type>::value                  \
+    >                                                                          \
+  >                                                                            \
+  name(U&& other) {                                                            \
+    *this = std::forward<U>(other);                                            \
+  }                                                                            \
+                                                                               \
+  template <                                                                   \
+    class U,                                                                   \
+    class = caf::detail::enable_if_t<                                          \
+      !std::is_same<name, typename std::decay<U>::type>::value                 \
+    >                                                                          \
+  >                                                                            \
+  name(U&& owner, std::string id = {})                                         \
+    : base_datatype(std::forward<U>(owner), std::move(id)) {                   \
+  }                                                                            \
+                                                                               \
+  name() = default;                                                            \
+
+/// Base class for CRDTs
 class base_datatype {
 public:
   /// @private
   base_datatype() = default;
 
-  ///
+  /// @param owner A actor handle to state the owning actor
+  /// @param id Replica-ID for this instance
   template <class ActorType>
   base_datatype(const ActorType& owner, const std::string& id)
     : owner_(actor_cast<actor>(owner)), id_(id) {
-    auto hdl = owner_.home_system().replicator().actor_handle();
-    send_as(owner_, hdl, subscribe_atom::value, uri{id});
+    if (!id.empty()) {
+      auto hdl = owner_.home_system().replicator().actor_handle();
+      send_as(owner_, hdl, subscribe_atom::value, uri{id});
+    }
   }
 
   virtual ~base_datatype() {
-    // If owner_ is no longer valid, the actor system got shut down and it is
-    // no longer possible nor necessary to unsubscribe
-    if (owner_) {
+    if (id_.valid() && owner_) {
       auto hdl = owner_.home_system().replicator().actor_handle();
       send_as(owner_, hdl, unsubscribe_atom::value, uri{id_});
     }
   }
 
   /// @returns id of this state
-  inline std::string id() const { return id_.str(); }
+  inline std::string id() const { return id_.to_string(); }
 
   /// @returns the owner of this state
   inline const actor& owner() const { return owner_; }
-
-  /// @warning use only for debugging purpose in unit tests
-  template <class ActorType>
-  inline void set_owner(ActorType&& owner) {
-    owner_ = std::forward<ActorType>(owner);
-  }
 
 protected:
   /// Publishes a delta crdt state to the replicator
   /// @param data the delta to be pushed to replicator
   template <class Data>
   void publish(const Data& data) const {
-    if (!owner_)
+    if (!id_.valid())
       return;
     auto hdl = owner_.home_system().replicator().actor_handle();
     send_as(owner_, hdl, id_, make_message(data));

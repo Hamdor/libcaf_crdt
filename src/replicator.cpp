@@ -26,7 +26,7 @@
 
 #include "caf/crdt/replicator.hpp"
 
-#include "caf/crdt/detail/replicator_hook.hpp"
+#include "caf/crdt/detail/replicator_callbacks.hpp"
 
 #include <exception>
 
@@ -50,7 +50,7 @@ void replicator::stop() {
 }
 
 void replicator::init(actor_system_config& cfg) {
-  cfg.add_hook_type<detail::replicator_hook>().
+  cfg.add_hook_type<detail::replicator_callbacks>().
       add_message_type<uri>("uri").
       add_message_type<std::unordered_set<uri>>("unordered_set<uri>").
       add_message_type<std::vector<message>>("vector<message>");

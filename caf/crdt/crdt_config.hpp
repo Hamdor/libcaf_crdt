@@ -23,6 +23,8 @@
 
 #include "caf/actor_system_config.hpp"
 
+#include "caf/io/middleman.hpp"
+
 #include "caf/crdt/detail/replica.hpp"
 
 namespace caf {
@@ -32,6 +34,7 @@ namespace crdt {
 class crdt_config : public actor_system_config {
 public:
   crdt_config() : actor_system_config() {
+    load<io::middleman>();
     load<crdt::replicator>();
   }
 

@@ -35,42 +35,30 @@ namespace types {
 /// Implementation of a grow-only counter (GCounter)
 template <class T>
 class gcounter : public base_datatype {
-  ///
-  gcounter(std::unordered_map<actor, T> map) : map_(std::move(map)) {
+  /// @private
+  gcounter(std::unordered_map<actor, T> map)
+    : base_datatype(), map_(std::move(map)) {
     // nop
-  }
-
-  ///
-  gcounter(actor key, T value) {
-    map_.emplace(key, value);
   }
 
 public:
-  using interface = notifiable<gcounter<T>>;
-  using base = typename notifiable<gcounter<T>>::base;
-  using behavior_type = typename notifiable<gcounter<T>>::behavior_type;
+  DECL_CRDT_CTORS(gcounter)
 
-  gcounter() = default;
-
-  template <class ActorType>
-  gcounter(ActorType&& owner, std::string id)
-    : base_datatype(std::forward<ActorType>(owner), std::move(id)) {
-    // nop
-  }
-
-  ///
+  /// Increment the counter by value
+  /// @param value to increment
   void increment_by(T value) {
     auto key = this->owner();
     value = map_[key] += value;
-    publish(gcounter{key, value});
+    std::unordered_map<actor, T> tmp;
+    tmp.emplace(key, value);
+    publish(gcounter{std::move(tmp)});
   }
 
-  ///
-  void increment() {
-    increment_by(1);
-  }
+  /// Increment the counter by one
+  void increment() { increment_by(1); }
 
-  ///
+  /// Get the count of the counter
+  /// @return the count
   inline T count() const {
     auto binary_op = [](T value, const std::pair<actor, T>& p) {
       return value + p.second;

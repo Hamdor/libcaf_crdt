@@ -65,17 +65,15 @@ protected:
     send(this, tick_ids_atom::value);
     return {
       // ---
-      [&](uri& id, message& msg) {
+      [&](const uri& id, message& msg) {
         if (current_sender()->node() == this->node())
           dist_.publish(id, msg); // Add to send buffer
-        auto delegate_to = find_actor(id);
-        if (delegate_to)
-          delegate(delegate_to, publish_atom::value, std::move(msg));
+        return result<void>{delegate_to<unit_t>(id, publish_atom::value,
+                            std::move(msg))};
       },
-      [&](uri& id, std::vector<message>& msgs) {
-        auto delegate_to = find_actor(id);
-        if (delegate_to)
-          delegate(delegate_to, publish_atom::value, std::move(msgs));
+      [&](const uri& id, std::vector<message>& msgs) {
+        return result<void>{delegate_to<unit_t>(id, publish_atom::value,
+                            std::move(msgs))};
       },
       [&](tick_state_atom) {
         // All states have to send their state to the replicator
@@ -111,74 +109,86 @@ protected:
       },
       // --- Subscribe & Unsubscribe
       [&](subscribe_atom, const uri& id) {
-        auto delegate_to = find_actor(id);
-        if (delegate_to)
-          delegate(delegate_to, subscribe_atom::value);
+        return result<void>{delegate_to<unit_t>(id, subscribe_atom::value)};
       },
       [&](unsubscribe_atom, const uri& id) {
-        auto delegate_to = find_actor(id);
-        if (delegate_to)
-          delegate(delegate_to, unsubscribe_atom::value);
+        return result<void>{delegate_to<unit_t>(id, unsubscribe_atom::value)};
       },
       // -- Read & Write Consistencies
       [&](read_all_atom, const uri& id) {
-        auto delegate_to = find_actor(id);
-        if (delegate_to)
-          delegate(delegate_to, read_all_atom::value, id,
-                   dist_.get_intrested(id));
+        return result<read_succeed_atom>{
+                 delegate_to<read_succeed_atom>(id, read_all_atom::value, id,
+                            dist_.get_intrested(id))
+               };
       },
       [&](read_k_atom, size_t k, const uri& id) {
-        auto delegate_to = find_actor(id);
-        if (delegate_to)
-          delegate(delegate_to, read_all_atom::value, id,
-                   dist_.get_intrested(id), k);
+        return result<read_succeed_atom>{
+                 delegate_to<read_succeed_atom>(id, read_k_atom::value, id,
+                            dist_.get_intrested(id), k)
+          };
       },
       [&](read_majority_atom, const uri& id) {
-        auto delegate_to = find_actor(id);
-        if (delegate_to)
-          delegate(delegate_to, read_majority_atom::value, id,
-                   dist_.get_intrested(id));
+        return result<read_succeed_atom>{
+                 delegate_to<read_succeed_atom>(id, read_majority_atom::value, id,
+                            dist_.get_intrested(id))
+               };
       },
       [&](read_local_atom, const uri& id) {
-        auto delegate_to = find_actor(id);
-        if (delegate_to)
-          delegate(delegate_to, read_local_atom::value);
+        return result<void>{delegate_to<unit_t>(id, read_local_atom::value)};
       },
       [&](write_all_atom, const uri& id, const message& msg) {
-        auto delegate_to = find_actor(id);
-        if (delegate_to)
-          delegate(delegate_to, write_all_atom::value, id,
-                   dist_.get_intrested(id), msg);
+        auto intest = dist_.get_intrested(id);
+        return result<write_succeed_atom>{
+                 delegate_to<write_succeed_atom>(id, write_all_atom::value, id,
+                            std::move(intest), msg)
+               };
       },
       [&](write_k_atom, size_t k, const uri& id, const message& msg) {
-        auto delegate_to = find_actor(id);
-          if (delegate_to)
-            delegate(delegate_to, write_all_atom::value, id,
-                     dist_.get_intrested(id), msg, k);
+        auto intrest = dist_.get_intrested(id);
+        return result<write_succeed_atom>{
+                 delegate_to<write_succeed_atom>(id, write_all_atom::value, id,
+                            std::move(intrest), msg, k)
+               };
       },
       [&](write_majority_atom, const uri& id, const message& msg) {
-        auto delegate_to = find_actor(id);
-        if (delegate_to)
-          delegate(delegate_to, write_majority_atom::value, id,
-                   dist_.get_intrested(id), msg);
+        return result<write_succeed_atom>{
+                 delegate_to<write_succeed_atom>(id, write_majority_atom::value, id,
+                            dist_.get_intrested(id), msg)
+               };
       },
       [&](write_local_atom, const uri& id, const message& msg) {
-        auto delegate_to = find_actor(id);
-        if (delegate_to)
-          delegate(delegate_to, write_local_atom::value, msg);
+        return result<void>{
+                 delegate_to<unit_t>(id, write_local_atom::value,
+                                                 msg)
+               };
+      },
+      [&](delete_replica, const uri& id) {
+        auto res = delegate_to<unit_t>(id, delete_replica::value);
+        states_.erase(id);
+        return result<void>{res};
       }
     };
   }
 
 private:
 
-  actor find_actor(const uri& id) {
+  template <class R, class... Ts>
+  expected<R> delegate_to(const uri& id, Ts&&... ts) {
+    auto to = find_actor(id);
+    if (to) {
+      delegate(*to, std::forward<Ts>(ts)...);
+      return R{};
+    }
+    return to.error();
+  }
+
+  expected<actor> find_actor(const uri& id) {
     auto iter = states_.find(id);
     if (iter == states_.end()) {
       auto args = make_message(id, notify_interval_ms_);
       auto opt = system().spawn<actor>(id.scheme(), std::move(args));
       if (!opt)
-        return {};
+        return {sec::invalid_argument};
       iter = states_.emplace(id, *opt).first;
       dist_.add_id(id);
     }

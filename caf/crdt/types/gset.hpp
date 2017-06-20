@@ -23,8 +23,6 @@
 #include <set>
 #include <algorithm>
 
-#include "caf/node_id.hpp"
-
 #include "caf/detail/comparable.hpp"
 
 #include "caf/crdt/types/base_datatype.hpp"
@@ -36,30 +34,22 @@ namespace types {
 /// GSet implementation as delta-CRDT
 template <class T>
 class gset : public base_datatype, caf::detail::comparable<gset<T>> {
-
+  /// @private
   gset(const T& elem) : set_{elem} {
     // nop
   }
 
-  gset(std::set<T> set) : set_(std::move(set)) {
+  /// @private
+  gset(std::set<T> set) : set_{std::move(set)} {
     // nop
   }
 
 public:
   using value_type = T;
-  using interface = notifiable<gset<T>>;
-  using base = typename notifiable<gset<T>>::base;
-  using behavior_type = typename notifiable<gset<T>>::behavior_type;
 
-  gset() = default;
+  DECL_CRDT_CTORS(gset)
 
-  template <class ActorType>
-  gset(ActorType&& owner, std::string id)
-    : base_datatype(std::forward<ActorType>(owner), std::move(id)) {
-    // nop
-  }
-
-  /// Merge function, for this type it is simple
+  /// Merge another gset state into this
   /// @param other delta-CRDT to merge into this
   /// @returns a delta gset<T>
   gset<T> merge(const gset<T>& other) {
@@ -89,7 +79,7 @@ public:
     for (auto& elem : elems)
       if (internal_emplace(elem))
         insertions.emplace(elem);
-    this->publish(std::set<T>{std::move(insertions)});
+    this->publish(gset{std::set<T>{std::move(insertions)}});
   }
 
   /// Checks if `elem` is in the set
@@ -136,20 +126,36 @@ public:
     proc & x.set_;
   }
 
+  /// @private
   intptr_t compare(const gset<T>& other) const noexcept {
     if (set_ == other.set_)     return 0;
     else if (set_ < other.set_) return -1;
     else                        return 1;
   }
 
+  /// Check if the set is empty
+  /// @returns `true` if the set is empty
+  ///          `false` otherwise
   inline size_t empty() const { return set_.empty(); }
 
+  /// @returns a iterator pointing to the beginning of the set
   inline typename std::set<T>::const_iterator cbegin() const {
     return set_.cbegin();
   }
 
+  /// @returns a iterator pointing to the ending of the set
   inline typename std::set<T>::const_iterator cend() const {
     return set_.cend();
+  }
+
+  /// @returns a iterator pointing to the beginning of the set
+  inline typename std::set<T>::iterator begin() const {
+    return set_.begin();
+  }
+
+  /// @returns a iterator pointing to the ending of the set
+  inline typename std::set<T>::iterator end() const {
+    return set_.end();
   }
 
 private:
@@ -157,6 +163,7 @@ private:
   inline bool internal_emplace(const T& elem) {
     return std::get<1>(set_.emplace(elem));
   }
+
   std::set<T> set_; /// Set of elements
 };
 

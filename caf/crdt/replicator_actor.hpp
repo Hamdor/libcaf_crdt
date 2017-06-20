@@ -61,21 +61,23 @@ using replicator_actor =
     /// Unsubscribes a actor from a replica id
     reacts_to<unsubscribe_atom, uri>,
     /// Reads the value from all nodes
-    reacts_to<read_all_atom, uri>,
+    replies_to<read_all_atom, uri>::with<read_succeed_atom>,
     /// Reads the value from k nodes
-    reacts_to<read_k_atom, size_t, uri>,
+    replies_to<read_k_atom, size_t, uri>::with<read_succeed_atom>,
     /// Reads the value from a majority of nodes
-    reacts_to<read_majority_atom, uri>,
+    replies_to<read_majority_atom, uri>::with<read_succeed_atom>,
     /// Reads only the local value
     reacts_to<read_local_atom, uri>,
     /// Writes to all nodes
-    reacts_to<write_all_atom, uri, message>,
+    replies_to<write_all_atom, uri, message>::with<write_succeed_atom>,
     /// Writes to k nodes
-    reacts_to<write_k_atom, size_t, uri, message>,
+    replies_to<write_k_atom, size_t, uri, message>::with<write_succeed_atom>,
     /// Writes to a majority of nodes
-    reacts_to<write_majority_atom, uri, message>,
+    replies_to<write_majority_atom, uri, message>::with<write_succeed_atom>,
     /// Writes only to local node
-    reacts_to<write_local_atom, uri, message>
+    reacts_to<write_local_atom, uri, message>,
+    /// Deletes a replica
+    reacts_to<delete_replica, uri>
   >;
 
 ///@relates replicator_actor

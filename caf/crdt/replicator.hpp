@@ -32,7 +32,7 @@
 namespace caf {
 namespace crdt {
 
-///
+/// Manages the CRDT-Module.
 class replicator : public actor_system::module {
 public:
   friend class actor_system;
@@ -52,23 +52,7 @@ public:
 
   replicator_actor actor_handle();
 
-  inline actor_system& system() const {
-    return system_;
-  }
-
-  /// Subscribe to replic changes
-  template <class T>
-  void subscribe(const uri& u, const notifiable<T>& subscriber) {
-    // TODO: Blockierend machen => mit error return
-    send_as(subscriber, manager_, subscribe_atom::value, u);
-  }
-
-  /// Unsubscribe from replic changes
-  template <class T>
-  void unsubscribe(const uri& u, const notifiable<T>& subscriber) {
-    // TODO: Blockierend machen => mit error return
-    send_as(subscriber, manager_, unsubscribe_atom::value, u);
-  }
+  inline actor_system& system() const { return system_; }
 
 protected:
   replicator(actor_system&);

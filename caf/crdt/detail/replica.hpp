@@ -201,8 +201,8 @@ protected:
       },
       [&](read_k_atom, const uri& u, std::set<replicator_actor> from, size_t k) {
         from.emplace(this->system().replicator().actor_handle());
-        delegate(this->spawn(reader<T>), read_majority_atom::value, u,
-                 std::move(from), k);
+        delegate(this->spawn(reader<T>), read_k_atom::value, u, std::move(from),
+                 k);
       },
       [&](read_majority_atom, const uri& u, std::set<replicator_actor> from) {
         from.emplace(this->system().replicator().actor_handle());
@@ -233,6 +233,10 @@ protected:
       [&](write_local_atom, message& msg) { // Write the content of msg to our state
         send(this, publish_atom::value, msg);
         return write_succeed_atom::value;
+      },
+      [&](delete_replica) {
+        if (subs_.size()) return;
+        quit();
       }
     };
   }

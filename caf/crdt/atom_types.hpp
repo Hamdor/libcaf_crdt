@@ -66,6 +66,10 @@ using write_failed_atom = atom_constant<atom("wFailed")>;
 /// Send back if read failed
 using read_failed_atom = atom_constant<atom("rFailed")>;
 
+/// Locally delete a replica
+using delete_replica = atom_constant<atom("delRepl")>;
+
+
 // -------- Internal atoms -----------------------------------------------------
 
 /// @private
@@ -97,9 +101,6 @@ using connection_lost_atom = atom_constant<atom("conLost")>;
 
 /// @private
 using get_ids_atom = atom_constant<atom("getIds")>;
-
-/// @private
-using delete_id_atom = atom_constant<atom("delId")>;
 
 /// @private
 using timeout_atom = atom_constant<atom("timeout")>;
